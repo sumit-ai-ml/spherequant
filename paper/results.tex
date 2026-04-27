@@ -324,6 +324,45 @@ with the theoretical prediction that a nine-dimensional random
 rotation cannot produce the concentration-of-measure effects that
 hold asymptotically in high dimension.
 
+Table~\ref{tab:fanin-beta} makes the transition explicit. The
+standard deviation of $\mathrm{Beta}(d/2, d/2)$ on $[-1, 1]$ scales as
+$(d+1)^{-1/2}$, and the codebook advantage over a uniform grid on
+$[-1, 1]$ is meaningful only when this standard deviation is small
+enough that the centroids cluster near the origin. The third column
+lists representative layers spanning the architectures in our study.
+
+\begin{table}[h]
+\centering
+\caption{Beta$(d/2, d/2)$ standard deviation on $[-1, 1]$ as a function
+of fan-in $d$, with representative layers from the architectures we
+study. The codebook advantage requires the rotated coordinate
+distribution to be sharply concentrated, which fails for
+$d \lesssim 32$.}
+\label{tab:fanin-beta}
+\begin{tabular}{rll}
+\hline
+$d$  & Beta std on $[-1, 1]$ & Representative layer \\
+\hline
+2048 & 0.022 & TinyLlama / Phi-1.5 attention and MLP linear layers \\
+768  & 0.036 & ViT-B/16 hidden \\
+256  & 0.062 & ResNet-50 mid-stage convolutions \\
+96   & 0.10  & MobileNet-V2 pointwise convolutions \\
+32   & 0.17  & EfficientNet-B0 squeeze-excitation bottleneck \\
+9    & 0.32  & MobileNet-V2 / EfficientNet-B0 $3{\times}3$ depthwise \\
+\hline
+\end{tabular}
+\end{table}
+
+EfficientNet-B0 in particular contains layers from three fan-in
+regimes simultaneously: pointwise convolutions in the favorable
+$d \geq 96$ regime, depthwise convolutions at $d \in \{9, 25\}$, and
+squeeze-excitation bottlenecks at $d \in \{4, 8, 16, 32\}$ that
+sit at or below the empirical boundary. The accuracy gap to QuaRot-RTN
+therefore depends on which regime carries the dominant share of the
+quantization error budget at the chosen bit width, which itself shifts
+with bit width because the regimes saturate at different rates.
+Appendix~\ref{app:boundary} decomposes this regime change in detail.
+
 The practical rule from these observations is that SphereQuant should be
 preferred on architectures whose dominant layer fan-in is at least
 100, and QuaRot-RTN should be preferred on architectures dominated by

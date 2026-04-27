@@ -596,6 +596,31 @@ carry enough of the quantization budget that SphereQuant still provides an overa
 benefit, even though the depthwise layers are in the same flat-density
 regime as MobileNet-V2.
 
+A second mechanism, distinct from the failure of Beta concentration,
+makes SphereQuant lose ground on small-fan-in layers. SphereQuant divides
+each row by its L2 norm $\lVert w \rVert_2$, while RTN-absmax and
+QuaRot-RTN divide by the maximum absolute value $\lVert w \rVert_\infty$.
+For any row, $\lVert w \rVert_\infty \in [\lVert w \rVert_2 / \sqrt{d},\,
+\lVert w \rVert_2]$, with the upper bound attained when a single
+coordinate holds all of the row's energy. On rows whose energy is
+concentrated in one or two outliers, which is the typical case for a
+small kernel where 9 weights compete for the L2 budget, the two
+normalizations behave very differently. Under L2 normalization the
+outlier maps near $1$ in the sparse tail of the Beta codebook, where
+centroid spacing is largest, and the per-coordinate error from rounding
+the outlier dominates the row's quantization error. Under absmax
+normalization the outlier maps exactly to the integer level
+$L = 2^{b-1} - 1$ and is reconstructed without rounding error, while
+the non-outlier coordinates compress to small magnitudes that the
+uniform grid handles coarsely but symmetrically. Large-fan-in linear
+layers spread their energy across many coordinates and therefore favor
+L2 normalization; depthwise kernels concentrate their energy in a few
+coordinates and therefore favor absmax. The L2-versus-absmax tradeoff
+is a separate axis from the Beta-concentration argument above, but the
+two mechanisms reinforce each other on the same set of layers, so we
+treat them jointly in Section~\ref{sec:experiments-boundary} and in
+Appendix~\ref{app:boundary}.
+
 The practical rule from this analysis is that SphereQuant should be preferred when
 $d \gtrsim 100$, and that a uniform codebook with rotation, which is to
 say QuaRot-RTN, should be preferred when $d \lesssim 20$. The transition
