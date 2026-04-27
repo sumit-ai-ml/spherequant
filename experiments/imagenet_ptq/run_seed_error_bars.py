@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -16,10 +15,8 @@ import numpy as np
 import torch
 
 _THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
 
-from ptq import quantize_model_h2  # noqa: E402
+from spherequant.ptq import quantize_model_spherequant  # noqa: E402
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits
@@ -90,19 +87,19 @@ def main():
                 seed_top1s = []
                 for seed in args.seeds:
                     t0 = time.time()
-                    model_q, stats = quantize_model_h2(
+                    model_q, stats = quantize_model_spherequant(
                         model, bits, cb, rotation_seed=seed)
                     model_q = model_q.to(device)
                     top1, top5, n = eval_top1_top5(model_q, loader, device)
                     drop1 = top1_fp32 - top1
                     drop5 = top5_fp32 - top5
-                    print(f"  h2 bits={bits} cb={cb} seed={seed}  "
+                    print(f"  sq bits={bits} cb={cb} seed={seed}  "
                           f"top1={top1*100:6.2f}%  top5={top5*100:6.2f}%  "
                           f"Δtop1={drop1*100:+.2f}pp  "
                           f"[{time.time()-t0:.0f}s]")
                     append_result({
                         "model": model_name,
-                        "variant": "h2",
+                        "variant": "spherequant",
                         "bits": bits,
                         "codebook": cb,
                         "top1": top1,

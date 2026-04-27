@@ -1,4 +1,4 @@
-"""H2 post-training quantization for Llama 3 8B and 70B on Hendrix.
+"""SphereQuant post-training quantization for Llama 3 8B and 70B on Hendrix.
 
 Key differences from the laptop-scale run.py in the parent folder:
 
@@ -18,7 +18,7 @@ Key differences from the laptop-scale run.py in the parent folder:
    numpy quantization functions, and write the result back to the layer's
    native device. This avoids host-side tensors of tens of GB.
 
-Methods implemented: RTN-absmax, QuaRot-RTN, H2+Beta. All training-free.
+Methods implemented: RTN-absmax, QuaRot-RTN, SphereQuant+Beta. All training-free.
 """
 
 from __future__ import annotations
@@ -37,10 +37,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # Reuse the core PTQ primitives from the CNN experiment folder.
 _THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
 
-from ptq import (  # noqa: E402
+from spherequant.ptq import (  # noqa: E402
     per_row_quantize,
     make_rotation,
     apply_rotation,
@@ -98,7 +96,7 @@ def _write_numpy_back(layer: nn.Linear, W_np: np.ndarray):
 def quantize_model_inplace(model: nn.Module, method: str, bits: int,
                            rotation_seed: int = 0):
     """Quantize every nn.Linear in model in place. Method in
-    {rtn_absmax, quarot, h2}."""
+    {rtn_absmax, quarot, sq}."""
     layers = [(n, m) for n, m in model.named_modules() if isinstance(m, nn.Linear)]
     t0 = time.time()
     for idx, (name, layer) in enumerate(layers):
@@ -109,7 +107,7 @@ def quantize_model_inplace(model: nn.Module, method: str, bits: int,
             W_rec = _rtn_absmax(W, bits)
         elif method == "quarot":
             W_rec = _quarot(W, bits, rotation_seed, idx)
-        elif method == "h2":
+        elif method == "spherequant":
             W_rec = _h2(W, bits, rotation_seed, idx)
         else:
             raise ValueError(method)
@@ -277,7 +275,7 @@ def sweep(model_id: str, bits_list, methods, run_lm_eval: bool,
                 "model": model_id,
                 "variant": method,
                 "bits": bits,
-                "codebook": "beta" if method == "h2" else "symabs_uniform",
+                "codebook": "beta" if method == "spherequant" else "symabs_uniform",
                 "perplexity": ppl,
                 "size_mb": size_q,
                 "compression_ratio": model_size_mb_fp16(model) / size_q,
@@ -309,7 +307,7 @@ def main():
                    help="HF model id, e.g. meta-llama/Meta-Llama-3-8B")
     p.add_argument("--bits", type=int, nargs="+", default=[2, 4, 6, 8])
     p.add_argument("--methods", nargs="+",
-                   default=["rtn_absmax", "quarot", "h2"])
+                   default=["rtn_absmax", "quarot", "spherequant"])
     p.add_argument("--lm-eval", action="store_true",
                    help="also run lm-eval-harness zero-shot tasks")
     p.add_argument("--rotation-seed", type=int, default=0)

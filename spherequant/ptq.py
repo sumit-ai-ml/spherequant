@@ -1,24 +1,31 @@
 """Post-training quantization evaluators.
 
-Three quantization paths, each applied to trained CNN3 or RotatedCNN3 weights:
+Quantization paths, all per-row-normalized so the storage cost is identical
+across variants at a given bit budget (b bits per code + 1 FP32 norm per row):
 
-1. BASELINE: quantize W directly (no rotation). Per-row L2 normalize,
-   quantize the unit-sphere rows with uniform or Beta codebook, store norms.
-   This is the "what does TurboQuant-style quantization look like WITHOUT the
-   rotation step" control. Not the same as weight-magnitude quantization.
+1. BASELINE: quantize W directly (no rotation). L2-normalize each row,
+   quantize the unit-sphere coordinates with the chosen codebook, store norms.
+   Control for "what does codebook quantization look like WITHOUT rotation".
 
-2. H2 (rotate-then-quantize): take a baseline-trained CNN3, rotate each
-   layer's flattened weight on the fan-in axis (W_flat @ M), then quantize
-   the rotated rows. TurboQuant's original pipeline applied to CNN weights.
+2. SPHEREQUANT (rotate-then-quantize, ours): rotate each layer's flattened
+   weight on the fan-in axis (W_flat @ M), L2-normalize the rotated rows,
+   quantize, then reconstruct via the inverse rotation.
 
-3. H3 (quantize-U): take a RotatedCNN3 (H3-trained). U is already the "rotated
-   coordinates." Quantize U, reconstruct W = U_q @ M.T. This tests whether
-   training in the rotated basis produces a U whose distribution is more
-   quantizable than baseline W or H2's post-hoc-rotated W.
+3. QUAROT-style baseline (Ashkboos et al., NeurIPS 2024): rotation + per-row
+   absmax-scaled symmetric uniform quantization. Same rotation as SphereQuant,
+   but quantizes with a uniform integer grid instead of a Beta-matched codebook.
 
-All paths share the same codebooks (uniform grid on [-1,1] or Beta(d/2,d/2))
-and the same per-row normalization, so storage cost is identical across
-variants at a given bit budget.
+4. RTN-ABSMAX: round-to-nearest with per-channel symmetric absmax scaling.
+   No rotation. The canonical baseline used in GPTQ / AWQ / QuaRot papers.
+
+5. H3 (train in rotated basis, ablation): the model already stores U
+   (rotated coordinates) and a buffer M. Quantize U directly; the layer's
+   forward pass reconstructs W = U_q @ M.T. Tests whether training in the
+   rotated basis produces a U whose distribution is more quantizable than
+   post-hoc rotation of a baseline-trained W.
+
+All paths share the same codebooks (uniform grid on [-1, 1] or
+Beta(d/2, d/2) Lloyd-Max) and the same per-row normalization.
 """
 
 from __future__ import annotations
@@ -27,23 +34,16 @@ import copy
 from dataclasses import dataclass
 
 import numpy as np
-from scipy.stats import beta as beta_dist
 import torch
 import torch.nn as nn
+from scipy.stats import beta as beta_dist
 
-from rotation_utils import (
-    build_torch_rotation,
-    apply_rotation,
+from spherequant.rotation_utils import (
     SRHTRotation,
+    apply_rotation,
+    beta_ks_test,
     make_rotation,
 )
-
-# Only import KS test from parent; reimplement the Beta codebook locally
-# because the parent uses np.trapezoid (numpy >= 2.0) and our env is older.
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
-from utils import beta_ks_test  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -61,8 +61,8 @@ def uniform_codebook(bits: int) -> tuple[np.ndarray, np.ndarray]:
 def beta_codebook(d: int, bits: int) -> tuple[np.ndarray, np.ndarray]:
     """Beta(d/2, d/2) Lloyd-Max codebook on [-1, 1].
 
-    Same algorithm as TurboQuantMSE._build_codebook in the parent repo, but
-    uses np.trapz instead of np.trapezoid for numpy <2.0 compatibility.
+    Iterates Lloyd-Max in [0, 1] then shifts to [-1, 1]. Uses np.trapz for
+    compatibility with numpy < 2.0.
     """
     n_levels = 2 ** bits
     a = b = d / 2.0
@@ -88,7 +88,6 @@ def beta_codebook(d: int, bits: int) -> tuple[np.ndarray, np.ndarray]:
         if np.allclose(boundaries, new_boundaries, atol=1e-10):
             break
         boundaries = new_boundaries
-    # Shift from [0, 1] to [-1, 1]
     boundaries = (boundaries * 2 - 1).astype(np.float32)
     centroids = (centroids * 2 - 1).astype(np.float32)
     return boundaries, centroids
@@ -108,26 +107,23 @@ def quantize_with_codebook(x: np.ndarray, boundaries: np.ndarray,
 def per_row_quantize(W: np.ndarray, bits: int, codebook: str) -> tuple[np.ndarray, dict]:
     """Quantize each row of W independently after L2-normalizing.
 
-    Storage cost per row: d * bits (for the codes) + 4 bytes (FP32 norm).
+    Storage cost per row: d * bits (codes) + 4 bytes (FP32 norm).
 
     Args:
-        W: (N, d) FP32 matrix. Rows will be L2-normalized for codebook lookup.
+        W: (N, d) FP32 matrix.
         bits: 2, 4, 6, 8, ...
-        codebook: "uniform" or "beta"
+        codebook: "uniform" or "beta".
 
     Returns:
-        W_reconstructed: (N, d) float32 after round-trip
-        stats: dict with ks_D (KS vs Beta(d/2,d/2) on normalized rows),
-               mse (||W - W_rec||^2 / W.size), n_levels, codebook
+        (W_reconstructed, stats) where stats includes ks_D, mse, n_levels.
     """
     assert W.ndim == 2, f"expected (N, d) matrix, got {W.shape}"
     N, d = W.shape
     W = W.astype(np.float32)
 
-    # Row-wise L2 norm (store for reconstruction)
     norms = np.linalg.norm(W, axis=1, keepdims=True)
     norms_safe = np.where(norms < 1e-12, 1.0, norms)
-    W_unit = W / norms_safe  # rows on unit sphere, each coord in [-1, 1]
+    W_unit = W / norms_safe
 
     if codebook == "uniform":
         boundaries, centroids = uniform_codebook(bits)
@@ -136,11 +132,9 @@ def per_row_quantize(W: np.ndarray, bits: int, codebook: str) -> tuple[np.ndarra
     else:
         raise ValueError(f"unknown codebook: {codebook}")
 
-    # KS statistic against Beta(d/2,d/2) on the normalized-row coordinates
     ks = beta_ks_test(W_unit.ravel(), d=d)
-
     W_unit_q = quantize_with_codebook(W_unit, boundaries, centroids)
-    W_reconstructed = W_unit_q * norms  # multiply back by original norms
+    W_reconstructed = W_unit_q * norms
 
     mse = float(((W - W_reconstructed) ** 2).mean())
     return W_reconstructed.astype(np.float32), {
@@ -155,7 +149,7 @@ def per_row_quantize(W: np.ndarray, bits: int, codebook: str) -> tuple[np.ndarra
 
 
 # --------------------------------------------------------------------------
-# Per-layer quantization dispatch for baseline/H2/H3
+# Per-layer quantization dispatch
 # --------------------------------------------------------------------------
 
 @dataclass
@@ -167,15 +161,14 @@ class LayerStats:
 
 
 def _flatten_conv_or_linear(m: nn.Module) -> tuple[np.ndarray, tuple, str]:
-    """Return (W_flat, original_shape, kind)."""
     if isinstance(m, nn.Conv2d):
         W = m.weight.detach().cpu().numpy()
         orig_shape = W.shape  # (C_out, C_in, kH, kW)
-        W_flat = W.reshape(orig_shape[0], -1)  # (C_out, C_in*kH*kW)
+        W_flat = W.reshape(orig_shape[0], -1)
         return W_flat, orig_shape, "conv"
     if isinstance(m, nn.Linear):
         W = m.weight.detach().cpu().numpy()
-        orig_shape = W.shape  # (out, in)
+        orig_shape = W.shape
         return W.copy(), orig_shape, "linear"
     raise TypeError(f"unsupported module: {type(m).__name__}")
 
@@ -200,10 +193,13 @@ def quantize_model_baseline(model: nn.Module, bits: int, codebook: str) -> tuple
     return model_q, stats
 
 
-def quantize_model_h2(model: nn.Module, bits: int, codebook: str,
-                      rotation_seed: int = 0,
-                      rotation_type: str = "srht") -> tuple[nn.Module, list[LayerStats]]:
-    """H2: rotate each layer's fan-in axis, then quantize. Reconstruct with M.T."""
+def quantize_model_spherequant(model: nn.Module, bits: int, codebook: str,
+                               rotation_seed: int = 0,
+                               rotation_type: str = "srht") -> tuple[nn.Module, list[LayerStats]]:
+    """SphereQuant: rotate each layer's fan-in axis, then per-row-normalize and
+    quantize the rotated coordinates with the (Beta or uniform) codebook.
+    Reconstruct via the inverse rotation.
+    """
     model_q = copy.deepcopy(model)
     stats = []
     for idx, (name, m) in enumerate(
@@ -212,17 +208,14 @@ def quantize_model_h2(model: nn.Module, bits: int, codebook: str,
     ):
         W_flat, orig_shape, _ = _flatten_conv_or_linear(m)
         N, d = W_flat.shape
-        # Per-layer rotation seed so different layers get different Ms
         per_layer_seed = rotation_seed * 1000 + idx + 1
         rot = make_rotation(d, per_layer_seed, rotation_type)
-        # Rotate rows: U = W_flat @ M (equivalently apply_rotation in parent repo)
-        U = apply_rotation(W_flat.astype(np.float32), rot)  # (N, d)
+        U = apply_rotation(W_flat.astype(np.float32), rot)
         U_rec, s = per_row_quantize(U, bits, codebook)
-        # Inverse rotation: W = U_rec @ M.T
         if isinstance(rot, SRHTRotation):
             W_rec = rot.inverse(U_rec)
         else:
-            # For dense: apply_rotation does X @ rot.T. Inverse is X @ rot.
+            # apply_rotation does X @ rot.T; inverse is X @ rot.
             W_rec = U_rec @ rot
         _write_weight_back(m, W_rec, orig_shape)
         stats.append(LayerStats(name, d, s["mse"], s["ks_D"]))
@@ -232,9 +225,8 @@ def quantize_model_h2(model: nn.Module, bits: int, codebook: str,
 def quantize_model_rtn_absmax(model: nn.Module, bits: int) -> tuple[nn.Module, list[LayerStats]]:
     """Round-to-nearest with per-channel symmetric absmax quantization.
 
-    The canonical RTN baseline used in LLM quantization papers (GPTQ, AWQ,
-    QuaRot). No rotation. For each row, scale = max|x|, then quantize to
-    2^(bits-1) - 1 levels symmetrically.
+    Canonical RTN baseline used in LLM quantization papers (GPTQ, AWQ, QuaRot).
+    No rotation. For each row: scale = max|x|, quantize to 2^(bits-1) - 1 levels.
     """
     model_q = copy.deepcopy(model)
     stats = []
@@ -259,18 +251,15 @@ def quantize_model_rtn_absmax(model: nn.Module, bits: int) -> tuple[nn.Module, l
 def quantize_model_quarot(model: nn.Module, bits: int,
                           rotation_seed: int = 0,
                           rotation_type: str = "srht") -> tuple[nn.Module, list[LayerStats]]:
-    """QuaRot-style baseline (Ashkboos et al., NeurIPS 2024) adapted for CNN weights.
+    """QuaRot-style baseline (Ashkboos et al., NeurIPS 2024) on CNN/MLP weights.
 
-    Hadamard/SRHT rotation on the fan-in axis + per-channel symmetric uniform
-    quantization (absmax scale per output row). Storage cost matches H2:
-    d * bits per weight code + 1 FP32 scale per row.
+    Hadamard / SRHT rotation on the fan-in axis + per-channel symmetric uniform
+    quantization (absmax scale per output row). Same storage cost as SphereQuant:
+    d * bits per code + 1 FP32 scale per row.
 
-    Differences from our H2:
-      - H2 uses per-row L2 normalize + [-1,1] codebook (uniform or Beta)
-      - QuaRot uses absmax-scaled symmetric integer quant: q = round(x / s * L)
-        where s = max(|x|), L = 2^(bits-1) - 1 (e.g. bits=4 -> L=7, levels=-7..+7)
-    This matches how QuaRot quantizes weights in the original LLM paper
-    (their weight-only setup is equivalent once activation quantization is removed).
+    Difference from SphereQuant: SphereQuant uses per-row L2 normalize + a
+    Beta-matched codebook on [-1, 1]. QuaRot uses absmax-scaled symmetric
+    integer quant on a uniform grid.
     """
     model_q = copy.deepcopy(model)
     stats = []
@@ -284,23 +273,20 @@ def quantize_model_quarot(model: nn.Module, bits: int,
         rot = make_rotation(d, per_layer_seed, rotation_type)
         U = apply_rotation(W_flat.astype(np.float32), rot)
 
-        # Per-channel symmetric absmax uniform quantization
         scale = np.max(np.abs(U), axis=1, keepdims=True).astype(np.float32)
         scale = np.where(scale < 1e-12, 1.0, scale)
-        levels = (1 << (bits - 1)) - 1  # e.g. bits=4 -> 7
+        levels = (1 << (bits - 1)) - 1
         if bits == 1:
-            levels = 1  # degenerate
+            levels = 1
         U_int = np.round(U / scale * levels).clip(-levels, levels)
         U_rec = (U_int * scale / levels).astype(np.float32)
 
-        # Inverse rotation
         if isinstance(rot, SRHTRotation):
             W_rec = rot.inverse(U_rec)
         else:
             W_rec = U_rec @ rot
 
         _write_weight_back(m, W_rec, orig_shape)
-        # KS against Beta(d/2, d/2) on post-rotation coordinates (for symmetry)
         U_unit = U / np.maximum(np.linalg.norm(U, axis=1, keepdims=True), 1e-12)
         ks = beta_ks_test(U_unit.ravel(), d=d)
         mse = float(((W_flat - W_rec) ** 2).mean())
@@ -309,13 +295,16 @@ def quantize_model_quarot(model: nn.Module, bits: int,
 
 
 def quantize_model_h3(rotated_model, bits: int, codebook: str) -> tuple[nn.Module, list[LayerStats]]:
-    """H3: model already stores U (rotated coords) and M (buffer).
-    Quantize U directly, then the effective_weight() reconstructs W = U_q @ M.T.
+    """H3 ablation: model already stores U (rotated coords) and M (buffer).
+    Quantize U directly; the layer's effective_weight() reconstructs W = U_q @ M.T.
+
+    H3 is a separate ablation (train in rotated basis), not the headline method.
+    Kept here because the cnn_init_rotation toy uses the same dispatch surface.
     """
     model_q = copy.deepcopy(rotated_model)
     stats = []
     for name, m in model_q.rotated_layers():
-        U = m.U.detach().cpu().numpy()  # (out, fan_in)
+        U = m.U.detach().cpu().numpy()
         d = U.shape[1]
         U_rec, s = per_row_quantize(U, bits, codebook)
         with torch.no_grad():
@@ -325,8 +314,7 @@ def quantize_model_h3(rotated_model, bits: int, codebook: str) -> tuple[nn.Modul
 
 
 # --------------------------------------------------------------------------
-# Evaluation on a model: returns accuracy, softmax scores, labels
-# (Scores cached so AUROC / other metrics can be recomputed without re-running.)
+# Evaluation helpers
 # --------------------------------------------------------------------------
 
 @torch.no_grad()

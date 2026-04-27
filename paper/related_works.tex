@@ -1,5 +1,5 @@
 % =============================================================================
-% Related Works section for the H2 paper.
+% Related Works section for the SphereQuant paper.
 % Standard packages only (amsmath, cite/natbib).
 % =============================================================================
 
@@ -43,11 +43,11 @@ All of these methods require at least some unlabelled examples from the
 target distribution, they require gradient or Hessian computation
 through the network, and they typically require hours of compute per
 model for the calibration step. Our method bypasses all three
-requirements. H2 uses no calibration data, computes no gradients, and
+requirements. SphereQuant uses no calibration data, computes no gradients, and
 runs to completion in under a minute on a single CPU core for ViT-B/16.
 We therefore compare head-to-head only against other training-free
 baselines, leaving the question of whether calibration-based refinement
-can be layered on top of H2 to future work.
+can be layered on top of SphereQuant to future work.
 
 \subsection{Training-free quantization}
 
@@ -68,10 +68,10 @@ nearly-training-free variants of BRECQ-style methods and of PACT
 amounts of training data or rely on specific architectural assumptions
 that do not translate to modern transformer-based architectures.
 
-Our H2 method competes in this training-free tier alongside RTN-absmax
+Our SphereQuant method competes in this training-free tier alongside RTN-absmax
 and the training-free variant of QuaRot. The empirical comparison in
 Section~\ref{sec:experiments} isolates the contribution of the rotation
-step and the codebook choice within this tier, and we position H2 as
+step and the codebook choice within this tier, and we position SphereQuant as
 complementary to rather than competing with the calibration-based
 methods above.
 
@@ -166,16 +166,16 @@ verify the rule empirically in Section~\ref{sec:experiments}.
 
 \subsection{Summary of positioning}
 
-H2 sits at the intersection of three literatures. It borrows the
+SphereQuant sits at the intersection of three literatures. It borrows the
 rotation primitive from the recent rotation-based quantization thread,
 the Lloyd-Max codebook construction from the classical scalar
 quantization literature, and the specific Beta-on-sphere distributional
 analysis from the TurboQuant line of work. The combination is, to our
 knowledge, new. Where QuaRot and SpinQuant gain accuracy through
-rotation plus uniform quantization, H2 gains additional accuracy
+rotation plus uniform quantization, SphereQuant gains additional accuracy
 through rotation plus a distribution-matched codebook. Where
-TurboQuant targets embedding compression, H2 targets weight
-compression. The empirical gap between H2 and the closest prior method
+TurboQuant targets embedding compression, SphereQuant targets weight
+compression. The empirical gap between SphereQuant and the closest prior method
 (QuaRot-RTN) grows with layer fan-in, consistent with the theoretical
 prediction from Section~\ref{sec:method-whybeats} that the advantage of
 matching the codebook to the source density scales as $1/d$.

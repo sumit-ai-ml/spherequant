@@ -18,7 +18,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from rotation_utils import build_torch_rotation
+from spherequant.rotation_utils import build_torch_rotation
 
 
 class RotatedConv2d(nn.Module):

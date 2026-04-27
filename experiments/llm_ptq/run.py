@@ -6,7 +6,7 @@ For each model × bit width × method, quantize the weights in place
 Methods:
   - "rtn"    : baseline round-to-nearest per-channel absmax (no rotation)
   - "quarot" : rotation + RTN absmax (our QuaRot-style baseline)
-  - "h2_beta": rotation + per-row L2 normalize + Beta codebook (ours)
+  - "spherequant_beta": rotation + per-row L2 normalize + Beta codebook (ours)
 
 Perplexity is the standard WikiText-2 metric used by GPTQ, AWQ, QuaRot.
 Lower is better. FP16 reference is the target.
@@ -18,7 +18,6 @@ import argparse
 import copy
 import gc
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -26,14 +25,12 @@ import torch
 import torch.nn as nn
 
 _THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
 
 # Reuse the core primitives
-from ptq import (  # noqa: E402
+from spherequant.ptq import (  # noqa: E402
     quantize_model_baseline,   # per-row L2 + codebook (CNN-style)
     quantize_model_rtn_absmax, # per-channel absmax uniform, no rotation (LLM RTN)
-    quantize_model_h2,
+    quantize_model_spherequant,
     quantize_model_quarot,
 )
 
@@ -71,8 +68,8 @@ def run_one(model, tokenizer, model_id: str, variant: str, bits: int,
     elif variant == "quarot":
         model_q, stats = quantize_model_quarot(model_q, bits,
                                                rotation_seed=rotation_seed)
-    elif variant == "h2":
-        model_q, stats = quantize_model_h2(model_q, bits, codebook,
+    elif variant == "spherequant":
+        model_q, stats = quantize_model_spherequant(model_q, bits, codebook,
                                            rotation_seed=rotation_seed)
     else:
         raise ValueError(f"unknown variant {variant}")
@@ -149,8 +146,8 @@ def sweep_model(model_id: str, bits_list, codebooks, device: str,
         # 2. QuaRot-RTN (rotation + per-channel absmax uniform)
         run_one(model, tokenizer, model_id, "quarot", bits, "symabs_uniform",
                 device, text, rotation_seed, seq_len, max_chunks, s)
-        # 3. H2 Beta (ours)
-        run_one(model, tokenizer, model_id, "h2", bits, "beta",
+        # 3. SphereQuant Beta (ours)
+        run_one(model, tokenizer, model_id, "spherequant", bits, "beta",
                 device, text, rotation_seed, seq_len, max_chunks, s)
 
     del model

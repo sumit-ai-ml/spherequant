@@ -3,20 +3,15 @@
 For each model:
   1. Load torchvision pretrained weights.
   2. Evaluate FP32 top-1 / top-5 on ImageNet val.
-  3. For each (bits, codebook, variant in {baseline, h2}):
-       - Quantize (baseline = direct; h2 = rotate then quantize).
+  3. For each (bits, codebook, variant in {baseline, spherequant}):
+       - Quantize (baseline = direct; spherequant = rotate then quantize).
        - Evaluate top-1 / top-5 on ImageNet val.
-
-Imports reuse quantization primitives from ../cnn_init_rotation/ptq.py:
-  - quantize_model_baseline (no rotation)
-  - quantize_model_h2 (per-layer rotation on fan-in axis)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -24,15 +19,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# Reuse the CNN experiment's PTQ primitives (no duplication)
-_THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
-
-from ptq import quantize_model_baseline, quantize_model_h2, quantize_model_quarot  # noqa: E402
+from spherequant.ptq import quantize_model_baseline, quantize_model_spherequant, quantize_model_quarot
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits
+
+_THIS = Path(__file__).resolve().parent
 
 
 RESULTS_DIR = _THIS / "results"
@@ -122,12 +114,12 @@ def sweep_model(model_name: str, bits_list, codebooks, loader, device,
     for bits in bits_list:
         s = model_size_at_bits(model, bits)
         for codebook in codebooks:
-            for variant in ["baseline", "h2"]:
+            for variant in ["baseline", "spherequant"]:
                 t0 = time.time()
                 if variant == "baseline":
                     model_q, stats = quantize_model_baseline(model, bits, codebook)
                 else:
-                    model_q, stats = quantize_model_h2(
+                    model_q, stats = quantize_model_spherequant(
                         model, bits, codebook, rotation_seed=rotation_seed
                     )
                 model_q = model_q.to(device)

@@ -14,7 +14,7 @@ the same trick work on the weights of a trained CNN?
 
 Two hypotheses, both on a 3-layer CNN trained on CIFAR-10.
 
-- **H2 (post-training rotation):** train a standard CNN with Kaiming init,
+- **SphereQuant (post-training rotation):** train a standard CNN with Kaiming init,
   then rotate each layer's flattened weight matrix on the fan-in axis before
   quantizing. Compare quantized accuracy vs quantizing unrotated weights.
 
@@ -29,7 +29,7 @@ and is omitted.
 
 ## Sweep
 
-- Variants: `baseline`, `h2_rotate_then_quantize`, `h3_rotated_basis`
+- Variants: `baseline`, `spherequant`, `h3_rotated_basis`
 - Seeds: 0, 1, 2
 - Quantization bits: 2, 4, 6, 8
 - Codebooks: uniform grid, Beta(d/2, d/2) Lloyd-Max
@@ -43,13 +43,14 @@ and is omitted.
 ```
 model.py           3-layer CNN with standard Kaiming init
 rotated_conv.py    RotatedConv2d and RotatedLinear modules for H3
-rotation_utils.py  torch wrappers around the parent repo's numpy SRHT
 train.py           10-epoch CIFAR-10 training loop
-ptq.py             post-training quantization: uniform vs Beta codebooks
 run.py             orchestrator over seeds x variants x bits
 plot.py            figures: acc-vs-bits, weight histograms, Beta KS fit
 test_sanity.py     round-trip, norm preservation, Beta-KS, H3 correctness
 ```
+
+Quantization primitives and rotation utilities live in the top-level
+`spherequant` package (`pip install -e .` from the repo root).
 
 ## How to run
 
@@ -65,5 +66,3 @@ python plot.py
 ```
 
 Results land in `results/results.jsonl` and `figures/*.png`.
-No files in the parent repo are modified; parent utilities are imported
-read-only via `sys.path`.

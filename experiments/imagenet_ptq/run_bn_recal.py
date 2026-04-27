@@ -1,6 +1,6 @@
-"""Run H2 + Beta quantization WITH BN recalibration, append to results.
+"""Run SphereQuant + Beta quantization WITH BN recalibration, append to results.
 
-We only re-run the high-value settings (4-bit and 6-bit Beta with H2) to show
+We only re-run the high-value settings (4-bit and 6-bit Beta with SphereQuant) to show
 the recovery benefit. Full re-sweep of everything would be wasteful since
 most settings are not BN-bound.
 """
@@ -9,17 +9,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
 import torch
 
 _THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
 
-from ptq import quantize_model_baseline, quantize_model_h2  # noqa: E402
+from spherequant.ptq import quantize_model_baseline, quantize_model_spherequant  # noqa: E402
 
 from imagenet_loader import get_imagenet_val_loader, HF_DATASET, build_transform, HFImageNetVal
 from models import load_pretrained, model_size_at_bits
@@ -98,7 +95,7 @@ def main():
     print("Ready.")
 
     for model_name in args.models:
-        print(f"\n=== {model_name} (H2 + Beta + BN recal) ===")
+        print(f"\n=== {model_name} (SphereQuant + Beta + BN recal) ===")
         model = load_pretrained(model_name).to(device)
         fp32 = existing_fp32(model_name)
         top1_fp32, top5_fp32 = fp32
@@ -107,21 +104,21 @@ def main():
             for cb in args.codebooks:
                 s = model_size_at_bits(model, bits)
                 t0 = time.time()
-                model_q, stats = quantize_model_h2(
+                model_q, stats = quantize_model_spherequant(
                     model, bits, cb, rotation_seed=args.rotation_seed)
                 model_q = model_q.to(device)
                 bn_recalibrate(model_q, calib_loader, device=device, n_batches=16)
                 top1, top5, n = eval_top1_top5(model_q, val_loader, device)
                 drop1 = top1_fp32 - top1
                 drop5 = top5_fp32 - top5
-                print(f"  h2_bnrecal bits={bits}  cb={cb}  "
+                print(f"  spherequant_bnrecal bits={bits}  cb={cb}  "
                       f"top1={top1*100:6.2f}%  top5={top5*100:6.2f}%  "
                       f"Δtop1={drop1*100:+.2f}pp  "
                       f"size={s['quantized_mb']:.2f}MB ({s['ratio']:.1f}x)  "
                       f"[{time.time()-t0:.0f}s]")
                 append_result({
                     "model": model_name,
-                    "variant": "h2_bnrecal",
+                    "variant": "spherequant_bnrecal",
                     "bits": bits,
                     "codebook": cb,
                     "top1": top1,

@@ -1,6 +1,6 @@
 # Llama 3 8B and 70B PTQ on Hendrix
 
-Full package for running the H2 post-training quantization sweep on Llama 3
+Full package for running the SphereQuant post-training quantization sweep on Llama 3
 8B and Llama 3 70B with WikiText-2 perplexity plus lm-eval-harness zero-shot
 tasks. Designed for the Hendrix HPC cluster at DIKU.
 
@@ -61,7 +61,7 @@ two evaluation protocols.
 |---|---|
 | RTN-absmax | Per-channel symmetric uniform round-to-nearest, no rotation |
 | QuaRot-RTN | Hadamard rotation + RTN-absmax |
-| H2 + Beta (ours) | Rotation + per-row L2 normalize + Beta Lloyd-Max codebook |
+| SphereQuant + Beta (ours) | Rotation + per-row L2 normalize + Beta Lloyd-Max codebook |
 
 | Bit widths | 2, 4, 6, 8 |
 | --- | --- |
@@ -111,7 +111,7 @@ Results append to `results/llama3_results.jsonl`. Each row is one evaluation:
 ```json
 {
   "model": "meta-llama/Meta-Llama-3-8B",
-  "variant": "h2",
+  "variant": "spherequant",
   "bits": 4,
   "codebook": "beta",
   "perplexity": 5.72,
@@ -161,7 +161,7 @@ and retry.
 
 **OOM on 70B during quantization.** The CPU-side backup of original weights
 can exceed 200 GB on some nodes. Either use a bigger memory node, or run the
-sweep one method at a time by passing `--methods h2` and repeating for each.
+sweep one method at a time by passing `--methods spherequant` and repeating for each.
 
 **lm-eval-harness version conflict.** If `lm-eval` throws import errors, pin
 to version 0.4.4 exactly. Newer versions have breaking API changes.

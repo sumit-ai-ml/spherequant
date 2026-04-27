@@ -1,12 +1,12 @@
 % =============================================================================
-% Results section for the H2 paper.
+% Results section for the SphereQuant paper.
 % Drops into TMLR template after Methodology and Related Work.
 % =============================================================================
 
 \section{Experiments}
 \label{sec:experiments}
 
-We evaluate H2 on two classes of pretrained models, namely image
+We evaluate SphereQuant on two classes of pretrained models, namely image
 classifiers on ImageNet-1k and causal language models on WikiText-2.
 The vision evaluation spans six architectures that cover the major
 families in modern image classification, and the language evaluation
@@ -55,7 +55,7 @@ We use TinyLlama 1.1B \citep{tinyllama2024} and Phi-1.5 1.3B
 Grouped-Query Attention and SwiGLU activations, while Phi-1.5 uses a
 GPT-style architecture with standard multi-head attention and GELU
 activations. Both models have hidden dimensions that place most layers
-in the large-fan-in regime where H2 is expected to perform well.
+in the large-fan-in regime where SphereQuant is expected to perform well.
 
 \paragraph{Language evaluation.}
 We evaluate WikiText-2 raw test set perplexity
@@ -71,7 +71,7 @@ We compare three training-free methods. RTN-absmax applies per-channel
 symmetric round-to-nearest quantization with no rotation. QuaRot-RTN
 applies a structured randomized Hadamard transform or a random dense
 orthogonal matrix on the fan-in axis, followed by the same
-per-channel symmetric uniform quantization. H2 is the proposed method
+per-channel symmetric uniform quantization. SphereQuant is the proposed method
 from Section~\ref{sec:method}. All three methods are evaluated at bit
 widths of 2, 4, 6, and 8. The full QuaRot paper's GPTQ-enhanced
 variant is not included, because it requires calibration data and
@@ -121,15 +121,15 @@ EfficientNet-B0 \citep{tan2019efficientnet} & 20.2 & 74.57 & 92.18 \\
 
 Table~\ref{tab:vision-4bit} reports the aggressive 4-bit regime,
 where the three methods show the largest head-to-head differences on
-architectures with large fan-in. On ResNet-50, H2 outperforms
+architectures with large fan-in. On ResNet-50, SphereQuant outperforms
 QuaRot-RTN by 9.4 percentage points on top-1 accuracy and recovers to
 within 5.7 percentage points of the FP32 baseline at 7.8 times
-compression. On ViT-B/16 and ConvNeXt-Tiny, both H2 and QuaRot-RTN
+compression. On ViT-B/16 and ConvNeXt-Tiny, both SphereQuant and QuaRot-RTN
 reach essentially lossless accuracy at 4-bit, within 0.1 percentage
-points of FP32. On EfficientNet-B0, H2 recovers 51.3 percentage points
+points of FP32. On EfficientNet-B0, SphereQuant recovers 51.3 percentage points
 where QuaRot-RTN reaches only 20.1 percentage points, a 31.2 point
 margin. MobileNet-V2 is the single architecture in our study where
-H2 underperforms QuaRot-RTN at 4-bit, a result we analyze in
+SphereQuant underperforms QuaRot-RTN at 4-bit, a result we analyze in
 Section~\ref{sec:experiments-boundary}.
 
 \begin{table}[t]
@@ -141,7 +141,7 @@ per-channel symmetric uniform quantization without rotation.}
 \label{tab:vision-4bit}
 \begin{tabular}{lrrrrr}
 \hline
-Model & Compression & FP32 & Baseline & QuaRot & H2 (ours) \\
+Model & Compression & FP32 & Baseline & QuaRot & SphereQuant (ours) \\
 \hline
 ResNet-18 & 7.9$\times$ & 67.45 & 17.31 & 59.99 & \textbf{62.34} \\
 ResNet-50 & 7.8$\times$ & 76.95 & 0.11 & 61.89 & \textbf{71.29} \\
@@ -156,25 +156,25 @@ EfficientNet-B0 & 7.2$\times$ & 74.57 & 0.18 & 20.11 & \textbf{51.34} \\
 Table~\ref{tab:vision-2bit} reports the extreme 2-bit regime at
 approximately 15 times compression. Most of the bit width and method
 combinations collapse to near-random accuracy, with top-1 accuracy
-below two percent. The striking exception is ViT-B/16, where H2
+below two percent. The striking exception is ViT-B/16, where SphereQuant
 achieves 69.86 percent top-1 accuracy at 15 times compression, while
 QuaRot-RTN collapses to 0.12 percent. This is a 69.7 percentage point
-gap in favor of H2 and is the largest head-to-head margin in the
+gap in favor of SphereQuant and is the largest head-to-head margin in the
 entire study. ConvNeXt-Tiny shows a smaller but still sizeable
-advantage, with H2 at 27.0 percent versus QuaRot-RTN at 0.08 percent.
-ResNet-18 also shows a positive H2 result at 4.6 percent, while on
+advantage, with SphereQuant at 27.0 percent versus QuaRot-RTN at 0.08 percent.
+ResNet-18 also shows a positive SphereQuant result at 4.6 percent, while on
 the three smaller-fan-in architectures all methods collapse.
 
 \begin{table}[t]
 \centering
 \caption{Top-1 accuracy at 2-bit weight quantization on the full
 ImageNet-1k validation set. At this compression level most methods
-fail catastrophically, with the notable exception of H2 on large-fan-
+fail catastrophically, with the notable exception of SphereQuant on large-fan-
 in architectures.}
 \label{tab:vision-2bit}
 \begin{tabular}{lrrrr}
 \hline
-Model & Compression & Baseline & QuaRot & H2 (ours) \\
+Model & Compression & Baseline & QuaRot & SphereQuant (ours) \\
 \hline
 ResNet-18 & 15.7$\times$ & 0.09 & 0.08 & \textbf{4.64} \\
 ResNet-50 & 15.3$\times$ & 0.09 & 0.05 & \textbf{0.43} \\
@@ -205,7 +205,7 @@ deviations from FP32 top-1 accuracy.}
 \hline
  & \multicolumn{3}{c|}{6-bit ($\approx$5$\times$)}
  & \multicolumn{3}{c}{8-bit ($\approx$4$\times$)} \\
-Model & Baseline & QuaRot & H2 & Baseline & QuaRot & H2 \\
+Model & Baseline & QuaRot & SphereQuant & Baseline & QuaRot & SphereQuant \\
 \hline
 ResNet-18 & 46.27 & 67.00 & \textbf{67.34} & 55.18 & 67.42 & \textbf{67.39} \\
 ResNet-50 & 0.21 & \textbf{76.86} & 76.57 & 0.32 & 76.86 & \textbf{76.89} \\
@@ -243,7 +243,7 @@ in the LLM literature.}
 \label{tab:llm}
 \begin{tabular}{llrrrr}
 \hline
-Model & Bits & Compression & Baseline & QuaRot & H2 (ours) \\
+Model & Bits & Compression & Baseline & QuaRot & SphereQuant (ours) \\
 \hline
 TinyLlama 1.1B & FP16 & 1.0$\times$ & \multicolumn{3}{c}{7.972} \\
 TinyLlama 1.1B & 8 & 1.88$\times$ & 7.974 & 7.977 & \textbf{7.973} \\
@@ -263,40 +263,40 @@ Phi-1.5 1.3B & 2 & 5.24$\times$ & 354{,}350 & 74{,}433 & \textbf{77.032} \\
 \paragraph{TinyLlama pattern.}
 The TinyLlama results echo the vision pattern. At 8-bit and 6-bit, all
 three methods track the FP16 reference within two percent. At 4-bit,
-H2 reaches perplexity 8.68 compared to 10.67 for QuaRot-RTN and 10.98
-for RTN-absmax. In relative terms, H2 increases perplexity by 8.9
+SphereQuant reaches perplexity 8.68 compared to 10.67 for QuaRot-RTN and 10.98
+for RTN-absmax. In relative terms, SphereQuant increases perplexity by 8.9
 percent over FP16, while the two baselines increase it by 33.8 and
 37.7 percent respectively. At 2-bit all three methods collapse from
-the FP16 reference of 7.97, but H2 degrades far less than the
+the FP16 reference of 7.97, but SphereQuant degrades far less than the
 alternatives, reaching perplexity 4,713 while the baselines blow up to
 roughly 120,000 and 152,000. The 2-bit result echoes the ViT-B/16
-pattern where H2 is the only training-free method that produces
+pattern where SphereQuant is the only training-free method that produces
 usable accuracy at extreme compression.
 
 \paragraph{Phi-1.5 pattern.}
 The Phi-1.5 2-bit result is the most striking LLM number in our
-study. H2 reaches perplexity 77.03 compared to 74,433 for QuaRot-RTN
+study. SphereQuant reaches perplexity 77.03 compared to 74,433 for QuaRot-RTN
 and 354,350 for RTN-absmax. This is a ratio of approximately 1,000
-times for QuaRot and 4,600 times for RTN, and places H2 in a regime
+times for QuaRot and 4,600 times for RTN, and places SphereQuant in a regime
 where the model, although degraded from its FP16 perplexity of 21.8,
 still produces meaningful output. The 4-bit pattern is the cleanest
-winning configuration for H2 across all of our LLM experiments. H2
+winning configuration for SphereQuant across all of our LLM experiments. SphereQuant
 reaches perplexity 22.64, which is a 3.8 percent increase over the
 FP16 reference of 21.82. QuaRot-RTN at the same bit width reaches
 perplexity 24.33, an 11.5 percent increase, and RTN-absmax reaches
-26.92, a 23.4 percent increase. H2 therefore recovers more than half
+26.92, a 23.4 percent increase. SphereQuant therefore recovers more than half
 of the perplexity gap that QuaRot-RTN leaves, and approximately three
 quarters of the gap left by RTN-absmax. At 6-bit and 8-bit all three
-methods converge to within 0.7 percent of FP16 on Phi-1.5, with H2
-retaining a small lead at 6-bit (21.87 for H2 versus 21.92 for
+methods converge to within 0.7 percent of FP16 on Phi-1.5, with SphereQuant
+retaining a small lead at 6-bit (21.87 for SphereQuant versus 21.92 for
 QuaRot-RTN and 21.96 for RTN-absmax) and the three methods
 indistinguishable at 8-bit.
 
 \paragraph{Generalization from vision to language.}
 The qualitative pattern is identical across the vision and language
 experiments. All three methods converge at 8-bit and 6-bit where
-compression is mild. At 4-bit, H2 wins by a margin that depends on
-the architecture. At 2-bit, H2 is the only viable method on large-
+compression is mild. At 4-bit, SphereQuant wins by a margin that depends on
+the architecture. At 2-bit, SphereQuant is the only viable method on large-
 fan-in architectures, with gaps of 69 percentage points on ViT-B/16
 and a factor of 1,000 on Phi-1.5. The mechanism predicted by
 Section~\ref{sec:method} is therefore confirmed in both modalities.
@@ -310,7 +310,7 @@ architectures include a substantial number of depthwise-separable
 layers whose fan-in is the kernel area, which is 9 for 3$\times$3
 depthwise convolutions. This is well below the fan-in of 100 that
 Section~\ref{sec:method-boundary} identified as the practical
-threshold for H2.
+threshold for SphereQuant.
 
 To validate the architectural-boundary argument empirically, we
 measured the Kolmogorov-Smirnov distance between the post-rotation
@@ -324,14 +324,14 @@ with the theoretical prediction that a nine-dimensional random
 rotation cannot produce the concentration-of-measure effects that
 hold asymptotically in high dimension.
 
-The practical rule from these observations is that H2 should be
+The practical rule from these observations is that SphereQuant should be
 preferred on architectures whose dominant layer fan-in is at least
 100, and QuaRot-RTN should be preferred on architectures dominated by
 small-fan-in depthwise layers. In mixed architectures such as
 EfficientNet-B0, which combines small-fan-in squeeze-excitation and
 depthwise layers with moderate-fan-in pointwise convolutions, the
 method that wins overall depends on which layer type carries most of
-the quantization error budget. Our results show H2 winning on
+the quantization error budget. Our results show SphereQuant winning on
 EfficientNet-B0 at 4-bit and QuaRot-RTN winning at 6-bit, consistent
 with a regime change as the per-layer bit budget grows.
 
@@ -341,7 +341,7 @@ with a regime change as the per-layer bit budget grows.
 We summarize the four main empirical findings from this section.
 
 First, on architectures with large per-layer fan-in, which covers
-ResNet-50, ViT-B/16, ConvNeXt-Tiny, TinyLlama, and Phi-1.5, H2
+ResNet-50, ViT-B/16, ConvNeXt-Tiny, TinyLlama, and Phi-1.5, SphereQuant
 outperforms the training-free variant of QuaRot at aggressive bit
 widths. The gap is at least two percentage points on vision models at
 4-bit, and grows to nearly seventy percentage points on ViT-B/16 at
@@ -358,13 +358,13 @@ rotation-based method, and the codebook choice becomes second-order
 as the per-layer bit budget grows.
 
 Third, on depthwise-separable architectures with fan-in below twenty,
-H2 loses its theoretical advantage and underperforms QuaRot-RTN. This
+SphereQuant loses its theoretical advantage and underperforms QuaRot-RTN. This
 is consistent with the Beta distributional assumption failing at small
 fan-in, and we characterize the boundary at a fan-in of roughly 100.
 
 Fourth, the method generalizes from vision to language without any
 architecture-specific modification. The same mathematical argument
-that motivates H2 on ViT-B/16, where hidden dimension 768 satisfies the
+that motivates SphereQuant on ViT-B/16, where hidden dimension 768 satisfies the
 large-$d$ regime, applies equally on TinyLlama and Phi-1.5 where the
 hidden dimensions of 2048 and 2048 respectively place every linear
 layer well inside the favorable regime.

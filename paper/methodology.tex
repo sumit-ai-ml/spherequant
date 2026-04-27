@@ -1,5 +1,5 @@
 % =============================================================================
-% Methodology section for the H2 paper.
+% Methodology section for the SphereQuant paper.
 % Written as a drop-in LaTeX section using only standard packages:
 %   amsmath, amssymb, amsthm, algorithm, algpseudocode
 % Put it inside any TMLR template as \section{Methodology}.
@@ -19,11 +19,11 @@
 \section{Methodology}
 \label{sec:method}
 
-We describe H2, a post-training weight quantization pipeline that combines
+We describe SphereQuant, a post-training weight quantization pipeline that combines
 random orthogonal rotation with a scalar codebook matched to the coordinate
 distribution that rotation produces. The method is training-free, requires no
 calibration data, and runs in under a minute on a single CPU core for
-ViT-B/16. This section derives H2 from first principles, states each
+ViT-B/16. This section derives SphereQuant from first principles, states each
 assumption precisely, enumerates the baselines against which we compare it,
 and identifies the architectural regime in which the approach applies.
 
@@ -149,7 +149,7 @@ Section~\ref{sec:method-codebook} and the Kolmogorov--Smirnov validation
 test of Section~\ref{sec:experiments}, and we report all theoretical
 statements using the exact Beta$((d-1)/2, (d-1)/2)$ parameterization. The
 accuracy loss from this mismatch is negligible when $d \gtrsim 100$, which
-covers every layer to which we apply H2 in the experiments.
+covers every layer to which we apply SphereQuant in the experiments.
 \end{remark}
 
 \paragraph{Consequence at large $d$.}
@@ -298,7 +298,7 @@ or language model contains fewer than ten distinct fan-ins across all of
 its layers, so the total codebook overhead is negligible compared to the
 weight storage.
 
-\subsection{The H2 quantization algorithm}
+\subsection{The SphereQuant quantization algorithm}
 \label{sec:method-pipeline}
 
 We now combine the pieces of Sections \ref{sec:method-rotation}
@@ -308,8 +308,8 @@ seed $s$, the procedure produces a quantized reconstruction $\widehat{W}$
 along with per-row norms and the rotation seed.
 
 \begin{algorithm}[t]
-\caption{H2 post-training weight quantization, applied per layer.}
-\label{alg:h2}
+\caption{SphereQuant post-training weight quantization, applied per layer.}
+\label{alg:spherequant}
 \begin{algorithmic}[1]
 \Require weight matrix $W \in \mathbb{R}^{N \times d}$, bit budget $b$,
          rotation seed $s$
@@ -344,7 +344,7 @@ computing
 
 \paragraph{Explanation of Equation \ref{eq:dequant}.}
 The two operations on the right-hand side invert the two steps applied in
-Algorithm~\ref{alg:h2}. The forward rotation in matrix form was
+Algorithm~\ref{alg:spherequant}. The forward rotation in matrix form was
 $U_{\text{matrix}} = \widetilde{W}_{\text{matrix}}\, M^\top$ as in
 Equation~\ref{eq:forward-matrix}. Its inverse is obtained by right-
 multiplying by $(M^\top)^{-1} = M$, since $M$ is orthogonal and therefore
@@ -358,7 +358,7 @@ network uses $W$.
 \subsection{Baselines in the training-free regime}
 \label{sec:method-baselines}
 
-Our experiments compare H2 against three baselines, each of which is also
+Our experiments compare SphereQuant against three baselines, each of which is also
 training-free and requires no calibration data. We describe them formally
 here so that every method appearing in our result tables has a
 corresponding algorithmic specification.
@@ -378,8 +378,8 @@ assumption on the weights.
 
 \paragraph{QuaRot-RTN.}
 Rotation followed by RTN-absmax. We sample the same kind of random
-orthogonal matrix $M$ as in H2 and apply the forward rotation
-$U = \widetilde{W}\, M^\top$. For H2 the rotation is applied after row
+orthogonal matrix $M$ as in SphereQuant and apply the forward rotation
+$U = \widetilde{W}\, M^\top$. For SphereQuant the rotation is applied after row
 L2 normalization, whereas for QuaRot-RTN we follow the original
 prescription and apply the rotation directly to the raw row, then set the
 scale as $s_i = \max_j |U_{i,j}|$. Quantization and dequantization proceed
@@ -388,12 +388,12 @@ matrix is $\widehat{W} = \widehat{U}\, M$. We compare against this
 training-free variant of QuaRot for an apples-to-apples isolation of the
 codebook choice. The full QuaRot paper additionally uses GPTQ-style
 calibration-based weight refinement, which is orthogonal to the rotation
-and codebook design and can be applied on top of either QuaRot-RTN or H2.
+and codebook design and can be applied on top of either QuaRot-RTN or SphereQuant.
 
 \paragraph{Baseline with codebook but no rotation.}
 To isolate the contribution of the rotation step, we also run a variant
 that applies row L2 normalization and the Lloyd--Max Beta codebook but
-omits the rotation. This is Algorithm~\ref{alg:h2} with step 3 replaced by
+omits the rotation. This is Algorithm~\ref{alg:spherequant} with step 3 replaced by
 $M = I$. The resulting quantizer is straightforward to derive
 theoretically, because unrotated normalized weights do not have the
 Beta density, and so the codebook is mismatched to the actual distribution.
@@ -405,7 +405,7 @@ contribution of a matched codebook.
 \label{sec:method-storage}
 
 Each quantized layer stores three components. The quantized codes occupy
-$N\, d\, b / 8$ bytes. The per-row norms for H2 and per-row scales for
+$N\, d\, b / 8$ bytes. The per-row norms for SphereQuant and per-row scales for
 RTN-absmax and QuaRot-RTN require $4N$ bytes in floating-point precision.
 The rotation seed is a single four-byte integer. The codebook itself
 consists of $K + 1 = 2^b + 1$ boundaries and $K = 2^b$ centroids, for a
@@ -443,7 +443,7 @@ true compression ratio.
 
 We augment the per-layer iteration with a dedicated pass over
 \texttt{nn.MultiheadAttention} modules that runs after the main iteration
-completes. For each such module we apply Algorithm~\ref{alg:h2} to
+completes. For each such module we apply Algorithm~\ref{alg:spherequant} to
 \texttt{in\_proj\_weight} as if it were a linear weight with fan-in $d$
 equal to the embedding dimension. The \texttt{out\_proj} submodule is
 already an \texttt{nn.Linear} and is handled by the standard pass. Causal
@@ -452,10 +452,10 @@ attention projections as separate \texttt{nn.Linear} modules, so the
 multi-head attention pass is specific to vision-transformer
 implementations that use PyTorch's default module.
 
-\subsection{Why H2 beats uniform after rotation}
+\subsection{Why SphereQuant beats uniform after rotation}
 \label{sec:method-whybeats}
 
-QuaRot-RTN and H2 apply the same rotation and both use per-row scale
+QuaRot-RTN and SphereQuant apply the same rotation and both use per-row scale
 information. The methods differ only in the codebook and in the choice of
 scale. Comparing them head-to-head therefore isolates the effect of
 matching the codebook to the post-rotation distribution.
@@ -467,7 +467,7 @@ rotation equals three to four standard deviations of the coordinate
 distribution. The three interior transitions at $\pm 1/3$ and zero are
 therefore far from where the density concentrates, because the standard
 deviation under $f_d$ is of order $1/\sqrt{d}$ relative to the unit-norm
-scale. Under H2, Lloyd--Max places the four centroids at the conditional
+scale. Under SphereQuant, Lloyd--Max places the four centroids at the conditional
 means of the four quartiles of $f_d$. At large $d$ the density is
 approximately Gaussian with standard deviation $\sigma \approx
 1/\sqrt{d}$, and the classical Lloyd--Max solution for a unit-variance
@@ -505,7 +505,7 @@ concentrates on scale $1/\sqrt{d}$ around zero. This gives
 C \cdot d^{-1/3},
 \label{eq:bennett-beta}
 \end{equation}
-so Bennett's formula yields $\mathcal{D}^\star_K = O(K^{-2}/d)$ for H2.
+so Bennett's formula yields $\mathcal{D}^\star_K = O(K^{-2}/d)$ for SphereQuant.
 The comparison to QuaRot-RTN requires care because QuaRot uses per-row
 adaptive scaling rather than a fixed grid. Each row is quantized
 uniformly on $[-s_i, +s_i]$ where $s_i = \max_j |U_{i,j}|$ is the per-row
@@ -586,17 +586,17 @@ addition, L2 normalization over only nine values is statistically noisy,
 which further degrades the match to the target density.
 
 Taken together, these two factors explain the one architecture in our
-study where H2 fails, namely MobileNet-V2. Depthwise convolutions with
+study where SphereQuant fails, namely MobileNet-V2. Depthwise convolutions with
 $d = 9$ do not benefit from the Beta codebook, and the per-row L2
 normalization adds noise without improving the distributional match. The
 depthwise-separable blocks in EfficientNet-B0 and ConvNeXt-Tiny are less
 severe cases, because those networks interleave large-fan-in pointwise
 convolutions with small-fan-in depthwise layers. The pointwise layers
-carry enough of the quantization budget that H2 still provides an overall
+carry enough of the quantization budget that SphereQuant still provides an overall
 benefit, even though the depthwise layers are in the same flat-density
 regime as MobileNet-V2.
 
-The practical rule from this analysis is that H2 should be preferred when
+The practical rule from this analysis is that SphereQuant should be preferred when
 $d \gtrsim 100$, and that a uniform codebook with rotation, which is to
 say QuaRot-RTN, should be preferred when $d \lesssim 20$. The transition
 region between these two regimes contains most of the depthwise-separable
@@ -606,7 +606,7 @@ an obvious avenue for future work.
 \subsection{Computational cost}
 \label{sec:method-cost}
 
-H2 introduces no overhead at inference time beyond the one-time
+SphereQuant introduces no overhead at inference time beyond the one-time
 dequantization step when the model is loaded. The forward pass operates on
 the reconstructed $\widehat{W}$ exactly as the original model operates on
 $W$, and on hardware with low-precision arithmetic support the natural
@@ -624,7 +624,7 @@ takes under thirty seconds on a single CPU core. No GPU is required.
 \subsection{Summary}
 \label{sec:method-summary}
 
-H2 is the composition of three well-understood ingredients. We normalize
+SphereQuant is the composition of three well-understood ingredients. We normalize
 each row of the weight matrix to the unit sphere, apply a uniformly
 random orthogonal rotation to the fan-in axis, and quantize the rotated
 coordinates against a Lloyd--Max codebook tuned to the Beta density that

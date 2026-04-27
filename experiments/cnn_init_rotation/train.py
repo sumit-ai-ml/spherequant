@@ -72,8 +72,8 @@ def get_dataloaders(batch_size: int, num_workers: int = 2):
 
 
 def build_model(variant: str, seed: int) -> nn.Module:
-    """variant in {baseline, h3_rotated_basis}. H2 uses the baseline at train time."""
-    if variant in ("baseline", "h2_rotate_then_quantize"):
+    """variant in {baseline, h3_rotated_basis}. SphereQuant uses the baseline at train time."""
+    if variant in ("baseline", "spherequant"):
         return CNN3()
     if variant == "h3_rotated_basis":
         # H3 derives per-layer rotation seeds from this top-level seed

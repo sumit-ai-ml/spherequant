@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -17,10 +16,8 @@ import numpy as np
 import torch
 
 _THIS = Path(__file__).resolve().parent
-_CNN_EXP = _THIS.parent / "cnn_init_rotation"
-sys.path.insert(0, str(_CNN_EXP))
 
-from ptq import quantize_model_quarot  # noqa: E402
+from spherequant.ptq import quantize_model_quarot  # noqa: E402
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits
