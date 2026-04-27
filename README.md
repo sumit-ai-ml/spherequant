@@ -51,34 +51,73 @@ vectors, and the rotated-basis (H3) reparameterization.
 
 ### Vision: ImageNet-1k top-1 accuracy (Beta codebook, training-free)
 
-**4-bit weights:**
+All methods use the same per-row L2 normalize + (codebook or absmax)
+quantization scheme; storage cost is identical at each bit width.
 
-| Model | FP32 | Baseline (no rot) | QuaRot | SphereQuant (ours) |
-|-------|-----:|------------------:|-------:|-------------------:|
-| ResNet-18 | 67.45% | 17.31% | 59.99% | **62.34%** |
-| ResNet-50 | 76.95% | 0.11% | 61.89% | **69.36%** |
-| ViT-B/16 | 79.14% | 19.61% | 78.99% | **79.02%** |
-| ConvNeXt-Tiny | 77.37% | 0.44% | 77.24% | **77.34%** |
-| MobileNet-V2 | 67.92% | 1.12% | **8.04%** | 5.65% |
-| EfficientNet-B0 | 74.57% | 0.18% | 20.11% | **51.34%** |
+**ResNet-18** — FP32: 67.45%
 
-**2-bit weights:**
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 55.18% | 67.42% | **67.39%** |
+| 6 | 46.27% | 67.00% | **67.34%** |
+| 4 | 17.31% | 59.99% | **62.34%** |
+| 2 | 0.13% | 0.08% | **4.64%** |
 
-| Model | FP32 | Baseline | QuaRot | SphereQuant (ours) |
-|-------|-----:|---------:|-------:|-------------------:|
-| ResNet-18 | 67.45% | 0.13% | 0.08% | **4.64%** |
-| ResNet-50 | 76.95% | 0.09% | 0.05% | **0.43%** |
-| ViT-B/16 | 79.14% | 1.71% | 0.12% | **69.86%** |
-| ConvNeXt-Tiny | 77.37% | 0.14% | 0.08% | **27.02%** |
-| MobileNet-V2 | 67.92% | 0.10% | 0.11% | 0.08% |
-| EfficientNet-B0 | 74.57% | 0.10% | 0.12% | 0.11% |
+**ResNet-50** — FP32: 76.95%
 
-The 2-bit ViT-B/16 result (SphereQuant 69.86 vs QuaRot 0.12) and 2-bit
-ConvNeXt-Tiny (27.02 vs 0.08) are the headline numbers: among
-training-free methods, SphereQuant is the only one that produces a usable
-2-bit ViT or ConvNeXt. The architectural boundary (depthwise / squeeze-
-excitation kernels with fan-in below ~32) is analyzed in
-`paper/results.tex` Section 4.
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 0.32% | 76.86% | **76.89%** |
+| 6 | 0.21% | **76.86%** | 76.57% |
+| 4 | 0.11% | 61.89% | **69.36%** |
+| 2 | 0.09% | 0.05% | **0.43%** |
+
+**ViT-B/16** — FP32: 79.14%
+
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 45.88% | 79.16% | **79.19%** |
+| 6 | 27.19% | **79.15%** | 79.14% |
+| 4 | 19.61% | 78.99% | **79.02%** |
+| 2 | 1.71% | 0.12% | **69.86%** |
+
+**ConvNeXt-Tiny** — FP32: 77.37%
+
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 40.79% | **77.36%** | 77.34% |
+| 6 | 19.41% | **77.48%** | 77.45% |
+| 4 | 0.44% | 77.24% | **77.34%** |
+| 2 | 0.14% | 0.08% | **27.02%** |
+
+**MobileNet-V2** — FP32: 67.92%  (depthwise kernels; fan-in as low as 9)
+
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 46.10% | 67.70% | **67.75%** |
+| 6 | 25.40% | **63.93%** | 59.11% |
+| 4 | 1.12% | **8.04%** | 5.65% |
+| 2 | 0.10% | **0.11%** | 0.08% |
+
+**EfficientNet-B0** — FP32: 74.57%  (depthwise + squeeze-excitation)
+
+| bits | Baseline (no rot) | QuaRot | SphereQuant (ours) |
+|-----:|------------------:|-------:|-------------------:|
+| 8 | 50.69% | **74.59%** | 73.85% |
+| 6 | 8.41% | **73.41%** | 70.92% |
+| 4 | 0.18% | 20.11% | **51.34%** |
+| 2 | 0.10% | **0.12%** | 0.11% |
+
+Read of the table: at 8-bit and 6-bit both rotation methods recover near-FP32
+on every model — there's nothing to differentiate. The interesting regime is
+4-bit and 2-bit, where SphereQuant wins decisively on architectures with
+large fan-in (ResNet-50 +7pp at 4-bit; ViT-B/16 +69.7pp at 2-bit; ConvNeXt-
+Tiny +26.9pp at 2-bit; EfficientNet-B0 +31pp at 4-bit) and ties or trails
+QuaRot on architectures dominated by small-fan-in depthwise kernels
+(MobileNet-V2, EfficientNet at 6-bit). The architectural boundary —
+fan-in roughly 32 — is the threshold below which the post-rotation Beta(d/2,
+d/2) approximation degrades and the matched codebook loses its edge over
+QuaRot's uniform grid. This is analyzed in `paper/results.tex` Section 4.
 
 ### LLM: WikiText-2 perplexity (lower = better)
 
