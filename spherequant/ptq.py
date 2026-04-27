@@ -45,6 +45,10 @@ from spherequant.rotation_utils import (
     make_rotation,
 )
 
+# np.trapz was removed in numpy 2.0; np.trapezoid is the replacement (and
+# was added as an alias in numpy 1.25). Bind once at import time.
+_trapezoid = getattr(np, "trapezoid", None) or np.trapz
+
 
 # --------------------------------------------------------------------------
 # Codebooks on the unit-sphere-normalized coordinate range [-1, 1]
@@ -61,8 +65,8 @@ def uniform_codebook(bits: int) -> tuple[np.ndarray, np.ndarray]:
 def beta_codebook(d: int, bits: int) -> tuple[np.ndarray, np.ndarray]:
     """Beta(d/2, d/2) Lloyd-Max codebook on [-1, 1].
 
-    Iterates Lloyd-Max in [0, 1] then shifts to [-1, 1]. Uses np.trapz for
-    compatibility with numpy < 2.0.
+    Iterates Lloyd-Max in [0, 1] then shifts to [-1, 1]. Uses np.trapezoid
+    when available (numpy >= 1.25), falling back to np.trapz on older numpy.
     """
     n_levels = 2 ** bits
     a = b = d / 2.0
@@ -75,9 +79,9 @@ def beta_codebook(d: int, bits: int) -> tuple[np.ndarray, np.ndarray]:
             lo, hi = boundaries[i], boundaries[i + 1]
             x = np.linspace(lo + 1e-10, hi - 1e-10, 1000)
             pdf = beta_dist.pdf(x, a, b)
-            mass = np.trapz(pdf, x)
+            mass = _trapezoid(pdf, x)
             if mass > 1e-15:
-                centroids[i] = np.trapz(x * pdf, x) / mass
+                centroids[i] = _trapezoid(x * pdf, x) / mass
             else:
                 centroids[i] = (lo + hi) / 2
         new_boundaries = np.zeros(n_levels + 1)
