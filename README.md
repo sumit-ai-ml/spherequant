@@ -81,6 +81,199 @@ CLI:
     python -m spherequant.audit --checkpoint path/to/full_module.pt
     python -m spherequant.audit --hf-model TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
+## End-to-end: audit + quantize + benchmark any HF model
+
+`spherequant.bench` chains the three steps for any HuggingFace image
+classifier or causal LM. Task is auto-detected from the model's
+`AutoConfig` (`AutoModelForImageClassification` → vision path,
+`AutoModelForCausalLM` → LLM path).
+
+Vision (default dataset: ImageNet-1k validation):
+
+    python -m spherequant.bench --hf-model google/vit-base-patch16-224 \
+        --bits 4 8 --methods spherequant quarot --subset-size 1024
+
+LLM (default dataset: WikiText-2 test):
+
+    python -m spherequant.bench --hf-model TinyLlama/TinyLlama-1.1B-Chat-v1.0 \
+        --bits 2 4 --methods spherequant quarot rtn_absmax \
+        --max-chunks 16
+
+Custom HuggingFace classification dataset:
+
+    python -m spherequant.bench --hf-model microsoft/resnet-50 \
+        --hf-dataset imagenet-1k --dataset-split validation \
+        --bits 4 --out results.jsonl
+
+Each run prints the audit verdict, evaluates the FP reference, then sweeps
+`(method × bits)` and prints a summary table. Pass `--out path.jsonl` for
+machine-readable results.
+
+Caveats:
+
+- **Label-space size mismatch is a warning, not an error.** Some HF mirrors
+  (e.g. `benjamin-paine/imagenet-1k-256x256`) report `ClassLabel(1001)` but
+  actually use labels 0..999. Bench warns and skips out-of-range samples at
+  eval time. If *every* sample is out of range, it errors out.
+- **Custom columns.** Auto-detection looks for HF `Image` and `ClassLabel`
+  features (vision) or a `text` column (LLM). Override with `--image-col`,
+  `--label-col`, or `--text-col`.
+- **Preflight refusal.** If audit says `BAD`, SphereQuant runs raise
+  `SphereQuantPreflightWarning` and are skipped in the sweep. Pass
+  `--no-preflight` to force-run on BAD models, or use `--methods quarot`.
+
+### Bring your own model
+
+Three formats, three paths:
+
+**1. HF directory (`save_pretrained` output) — CLI, zero extra code.**
+
+If your training script does `model.save_pretrained("./out")` and
+`processor.save_pretrained("./out")`, the bench CLI accepts the local path
+the same way it accepts a Hub repo ID:
+
+```bash
+python -m spherequant.bench --hf-model ./out \
+    --hf-dataset imagefolder --data-dir ./my_val_set \
+    --bits 4
+```
+
+`--hf-dataset imagefolder --data-dir <path>` works for any folder laid out
+as `<path>/<class_name>/img.jpg` — the standard PyTorch `ImageFolder` format.
+
+**2. Full `nn.Module` checkpoint (`torch.save(model, "x.pt")`) — CLI.**
+
+```bash
+# Vision: uses ImageNet-style preprocessing (resize + center-crop + normalize).
+python -m spherequant.bench --checkpoint ./model.pt \
+    --task image_classification --image-size 224 \
+    --hf-dataset imagefolder --data-dir ./my_val_set \
+    --bits 4
+
+# LLM: also needs --tokenizer (matching the model's vocabulary).
+python -m spherequant.bench --checkpoint ./llm.pt \
+    --task causal_lm --tokenizer ./tokenizer_dir \
+    --hf-dataset wikitext --dataset-config wikitext-2-raw-v1 \
+    --bits 4
+```
+
+**3. State-dict (`torch.save(model.state_dict(), "x.pt")`) — Python API.**
+
+A state-dict has no architecture, so reconstruct the model in code, then:
+
+```python
+from torch.utils.data import DataLoader
+from spherequant.bench import benchmark_image_classifier, benchmark_causal_lm
+
+# Vision
+model = MyArchitecture()                       # your code
+model.load_state_dict(torch.load("model.pt"))
+loader = DataLoader(my_val_dataset, batch_size=64)  # any (x, y) loader
+
+results = benchmark_image_classifier(
+    model, loader,
+    bits_list=[4, 8],
+    methods=["spherequant", "quarot"],
+    device="cuda",
+)
+
+# LLM
+results = benchmark_causal_lm(
+    model, tokenizer, text_corpus,
+    bits_list=[4],
+    seq_len=2048,
+    device="cuda",
+)
+```
+
+`benchmark_image_classifier` accepts any `nn.Module` (HF or not — it
+auto-detects from the output type) and any DataLoader yielding `(x, y)`
+batches. Number of classes is inferred from the first batch's logits if not
+passed explicitly. Both helpers return a list of `BenchResult` rows you can
+write with `spherequant.bench.write_jsonl`.
+
+### Bring your own dataset
+
+The bench CLI uses HuggingFace's `datasets` builders, so any layout those
+builders accept works. The four common ones:
+
+**Vision: `imagefolder` (most common).** Class names = subfolder names; HF
+maps them to integer labels alphabetically. Two layouts work:
+
+```
+# Single-split layout — load with --dataset-split train
+my_data/
+├── cat/
+│   ├── 0.jpg
+│   └── 1.jpg
+└── dog/
+    └── 0.jpg
+
+# Multi-split layout — picks "validation"/"test"/"train" automatically
+my_data/
+├── train/
+│   ├── cat/...
+│   └── dog/...
+└── validation/
+    ├── cat/...
+    └── dog/...
+```
+
+```bash
+python -m spherequant.bench --hf-model ./my_model \
+    --hf-dataset imagefolder --data-dir ./my_data --bits 4
+```
+
+**Vision: CSV / Parquet with image paths.** A CSV like
+`image_path,label\ncat/0.jpg,0\ndog/0.jpg,1` plus the actual files alongside:
+
+```bash
+python -m spherequant.bench --hf-model ./my_model \
+    --hf-dataset csv --data-dir ./my_data \
+    --image-col image_path --label-col label --bits 4
+```
+
+(Note: HF's `csv` builder loads the path as a string, not as a decoded
+image, so this only works for image classifiers if you've cast the column
+to `Image()` ahead of time. For most users `imagefolder` is the right
+answer.)
+
+**LLM: `text` builder.** A folder of `.txt` files; each line/file becomes a
+row. The `text` column holds the body — no `--text-col` override needed.
+
+```
+my_corpus/
+├── doc1.txt
+├── doc2.txt
+└── ...
+```
+
+```bash
+python -m spherequant.bench --checkpoint ./llm.pt --task causal_lm \
+    --tokenizer ./tokenizer_dir \
+    --hf-dataset text --data-dir ./my_corpus --bits 4
+```
+
+**LLM: JSONL.** One JSON object per line with a text field:
+
+```jsonl
+{"text": "the quick brown fox..."}
+{"text": "lorem ipsum..."}
+```
+
+```bash
+python -m spherequant.bench --checkpoint ./llm.pt --task causal_lm \
+    --tokenizer ./tokenizer_dir \
+    --hf-dataset json --data-dir ./my_corpus --text-col text --bits 4
+```
+
+**Anything else (custom format, on-the-fly preprocessing).** Build a
+`torch.utils.data.DataLoader` yielding `(x, y)` (vision) or build the
+corpus string yourself (LLM), then call the Python API
+(`benchmark_image_classifier` / `benchmark_causal_lm`) directly. The CLI
+is just a thin wrapper around those — anything you can do in 10 lines of
+PyTorch will work.
+
 ### Verdicts on the six paper architectures + LLMs
 
 Verified against the audit shipped in this repo:
