@@ -363,20 +363,43 @@ def _load_checkpoint(path: str) -> nn.Module:
     )
 
 
+def _load_hf_model(model_id: str) -> nn.Module:
+    """Load a HuggingFace causal LM by repo ID. Lazy-imports transformers
+    so the audit module does not have a hard dependency on it.
+    """
+    try:
+        from transformers import AutoModelForCausalLM
+    except ImportError:
+        raise SystemExit(
+            "--hf-model requires the transformers package. "
+            "Install with: pip install transformers"
+        )
+    return AutoModelForCausalLM.from_pretrained(model_id, dtype=torch.float32)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     src = parser.add_mutually_exclusive_group()
     src.add_argument("--model", default=None,
                      help="torchvision model name (resnet18, resnet50, vit_b_16, "
                           "convnext_tiny, mobilenet_v2, efficientnet_b0). "
-                          "Default: resnet50 if neither --model nor --checkpoint is given.")
+                          "Default: resnet50 if neither flag is given.")
     src.add_argument("--checkpoint", default=None,
-                     help="path to a torch.save'd nn.Module (not a state_dict)")
+                     help="path to a torch.save'd nn.Module (not a state_dict). "
+                          "Loaded with weights_only=False — only point at "
+                          "trusted files.")
+    src.add_argument("--hf-model", default=None, dest="hf_model",
+                     help="HuggingFace causal LM repo ID, e.g. "
+                          "'TinyLlama/TinyLlama-1.1B-Chat-v1.0' or "
+                          "'microsoft/phi-1_5'. Requires the transformers package.")
     args = parser.parse_args()
 
     if args.checkpoint is not None:
         print(f"Auditing checkpoint {args.checkpoint}...")
         model = _load_checkpoint(args.checkpoint)
+    elif args.hf_model is not None:
+        print(f"Auditing HuggingFace model {args.hf_model}...")
+        model = _load_hf_model(args.hf_model)
     else:
         name = args.model or "resnet50"
         print(f"Auditing {name}...")

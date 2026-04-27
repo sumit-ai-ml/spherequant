@@ -79,6 +79,7 @@ CLI:
 
     python -m spherequant.audit --model resnet50
     python -m spherequant.audit --checkpoint path/to/full_module.pt
+    python -m spherequant.audit --hf-model TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
 ## Headline results
 
