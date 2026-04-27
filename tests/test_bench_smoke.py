@@ -244,7 +244,7 @@ def test_benchmark_image_classifier_infers_n_classes_from_logits():
     assert results[0].extra.get("n_skipped_oor", 0) == 0
 
 
-def test_cli_checkpoint_round_trip(tmp_path: Path, monkeypatch):
+def test_cli_checkpoint_round_trip(_hf_available, tmp_path: Path, monkeypatch):
     """Save a tiny module with torch.save, then run the CLI on it via run()."""
     import torch
     from datasets import ClassLabel, Dataset, Features, Image as HFImage
@@ -252,7 +252,6 @@ def test_cli_checkpoint_round_trip(tmp_path: Path, monkeypatch):
     import numpy as np
     from PIL import Image
 
-    pytest.importorskip("transformers")
     from spherequant.bench import vision
 
     n_classes = 4
