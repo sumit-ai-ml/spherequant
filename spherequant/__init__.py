@@ -2,9 +2,20 @@
 orthogonal rotation + Beta-matched scalar codebook.
 """
 
+from spherequant.audit import (
+    BAD,
+    EMPTY,
+    GOOD,
+    MARGINAL,
+    LayerReport,
+    ModelReport,
+    audit,
+)
+from spherequant.exceptions import SphereQuantPreflightWarning
 from spherequant.ptq import (
     LayerStats,
     beta_codebook,
+    quantize_model,
     quantize_model_baseline,
     quantize_model_h3,
     quantize_model_quarot,
@@ -25,14 +36,23 @@ from spherequant.rotation_utils import (
 )
 
 __all__ = [
+    "BAD",
+    "EMPTY",
+    "GOOD",
+    "LayerReport",
     "LayerStats",
+    "MARGINAL",
+    "ModelReport",
     "SRHTRotation",
+    "SphereQuantPreflightWarning",
     "apply_rotation",
+    "audit",
     "beta_codebook",
     "beta_ks_test",
     "build_torch_rotation",
     "make_rotation",
     "materialize_rotation_matrix",
+    "quantize_model",
     "quantize_model_baseline",
     "quantize_model_h3",
     "quantize_model_quarot",

@@ -314,6 +314,78 @@ def quantize_model_h3(rotated_model, bits: int, codebook: str) -> tuple[nn.Modul
 
 
 # --------------------------------------------------------------------------
+# Top-level dispatch: one entrypoint with a fan-in audit pre-flight
+# --------------------------------------------------------------------------
+
+def quantize_model(
+    model: nn.Module,
+    bits: int,
+    method: str = "spherequant",
+    codebook: str = "beta",
+    rotation_seed: int = 0,
+    rotation_type: str = "srht",
+    preflight: bool = True,
+) -> tuple[nn.Module, list[LayerStats]]:
+    """Quantize ``model`` with the chosen ``method`` (default: SphereQuant).
+
+    When ``method == "spherequant"`` and ``preflight=True`` (the default), the
+    fan-in audit (:mod:`spherequant.audit`) runs first:
+
+      - ``BAD`` verdict raises :class:`SphereQuantPreflightWarning` with the
+        report attached. The user must pass ``preflight=False`` to override.
+      - ``MARGINAL`` verdict prints a single-line warning to stderr and
+        proceeds. The user is expected to handle small-d layers separately.
+      - ``GOOD`` and ``EMPTY`` verdicts proceed silently.
+
+    The audit only runs for ``method == "spherequant"``. The other methods
+    (``quarot``, ``baseline``, ``rtn_absmax``) have no architectural-boundary
+    failure mode, so the pre-flight is skipped.
+    """
+    if method == "spherequant" and preflight:
+        # Lazy import to avoid a circular at package import time.
+        from spherequant.audit import BAD, MARGINAL, audit
+        from spherequant.exceptions import SphereQuantPreflightWarning
+
+        report = audit(model, verbose=False)
+        verdict = report.overall_verdict
+        if verdict == BAD:
+            pct = 100 * report.bad_layer_fraction
+            n_dw = report.n_layers_depthwise
+            msg = (
+                f"Model has {pct:.1f}% of layers at d < 32 "
+                f"(including {n_dw} depthwise convolutions). "
+                f"SphereQuant will likely underperform QuaRot. "
+                f"Pass preflight=False to override, or use the QuaRot baseline."
+            )
+            raise SphereQuantPreflightWarning(msg, report=report)
+        if verdict == MARGINAL:
+            import sys
+            n_bad = report.n_layers_bad
+            print(
+                f"SphereQuant audit: mixed-d model. {n_bad} layers at d < 32 "
+                f"will be skipped — apply QuaRot or RTN-absmax to those instead.",
+                file=sys.stderr,
+            )
+
+    if method == "spherequant":
+        return quantize_model_spherequant(model, bits, codebook,
+                                          rotation_seed=rotation_seed,
+                                          rotation_type=rotation_type)
+    if method == "quarot":
+        return quantize_model_quarot(model, bits,
+                                     rotation_seed=rotation_seed,
+                                     rotation_type=rotation_type)
+    if method == "baseline":
+        return quantize_model_baseline(model, bits, codebook)
+    if method == "rtn_absmax":
+        return quantize_model_rtn_absmax(model, bits)
+    raise ValueError(
+        f"unknown method {method!r}; choose one of: "
+        "spherequant, quarot, baseline, rtn_absmax"
+    )
+
+
+# --------------------------------------------------------------------------
 # Evaluation helpers
 # --------------------------------------------------------------------------
 
