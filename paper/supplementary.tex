@@ -1,0 +1,168 @@
+% =============================================================================
+% Supplementary material for the SphereQuant paper.
+% Drops in as an appendix after the main paper, or as a separate file with
+% \appendix preceding it.
+% =============================================================================
+
+\section{Detailed analysis of the architectural boundary}
+\label{app:boundary}
+
+Section~\ref{sec:experiments-boundary} of the main text reports that
+SphereQuant trails QuaRot-RTN on MobileNet-V2 at four-bit and six-bit, and on
+EfficientNet-B0 at six-bit and eight-bit. This appendix decomposes the
+loss into three distinct mechanisms, each predicted by a separate aspect
+of the methodology in Section~\ref{sec:method}, and identifies a
+practical recipe for closing the gap.
+
+\subsection{Mechanism 1: small-fan-in failure of the Beta approximation}
+\label{app:beta-failure}
+
+The codebook used by SphereQuant is the Lloyd--Max minimum-MSE quantizer
+for $\mathrm{Beta}(d/2, d/2)$ on $[-1, 1]$. The standard deviation of
+this distribution scales as $(d+1)^{-1/2}$, giving the values listed in
+Table~\ref{tab:fanin-beta} of the main text. The reasoning that
+motivated the codebook (Section~\ref{sec:method-motivation}) was that a
+sharply concentrated post-rotation density admits levels that cluster
+near the origin and outperforms a uniform grid in proportion to that
+concentration. When the density itself is wide, the same reasoning
+predicts that the matched codebook collapses onto a near-uniform
+alternative. Concretely, at $d = 9$ the Lloyd--Max levels at four bits
+deviate from evenly spaced positions by less than five percent, so the
+codebook offers essentially no advantage over QuaRot's uniform grid.
+
+A separate sample-complexity issue compounds this. At $d = 2048$ the
+empirical histogram of one row's coordinates contains 2048 samples and
+already approximates the asymptotic $\mathrm{Beta}(1024, 1024)$
+density. At $d = 9$ each row contains nine samples; even if the
+underlying distribution were exactly Beta, no codebook can be matched
+to a nine-sample empirical density. Pooling coordinates across rows
+would defeat the per-row L2 normalization that anchors the unit-sphere
+geometry.
+
+This mechanism is the geometric content of
+Figure~\ref{fig:rotation-vision} in the main text. The leftmost column
+of the MobileNet-V2 and EfficientNet-B0 rows shows the post-rotation
+histogram remaining nearly flat across $[-1, 1]$, with the predicted
+Beta density itself nearly flat and offering no concentration to
+exploit.
+
+\subsection{Mechanism 2: L2-versus-absmax normalization on outlier rows}
+\label{app:l2-vs-absmax}
+
+For a single row $w \in \mathbb{R}^d$, SphereQuant divides by
+$\|w\|_2 = \sqrt{\sum_i w_i^2}$ before quantizing. RTN-absmax and
+QuaRot-RTN divide by $\|w\|_\infty = \max_i |w_i|$. The two norms are
+related by $\|w\|_\infty \in [\|w\|_2 / \sqrt{d},\, \|w\|_2]$, with the
+upper bound attained when one coordinate holds all of $w$'s energy.
+
+The relative behavior of the two normalizations on a $3 \times 3$
+depthwise kernel illustrates the effect. Suppose eight of the nine
+weights have magnitude $\epsilon$ and the ninth has magnitude $1$. Then
+$\|w\|_\infty = 1$ and $\|w\|_2 = \sqrt{1 + 8\epsilon^2} \approx 1$.
+Under L2 normalization, the outlier maps near $1$, in the sparsest
+region of the Beta codebook (where centroid spacing approaches the
+maximum at any bit width), and the per-coordinate error from rounding
+the outlier dominates the row's quantization error. Under absmax
+normalization the outlier maps exactly to the integer level
+$L = 2^{b-1} - 1$ and is reconstructed without rounding error at any
+$b \geq 2$, while the eight near-zero coordinates compress to small
+magnitudes that the uniform grid handles coarsely but symmetrically.
+
+The L2-versus-absmax tradeoff is therefore a separate axis from the
+Beta-concentration argument: even if Mechanism~\ref{app:beta-failure}
+were absent, an outlier-dominated row would still favor absmax
+quantization over L2 normalization. Depthwise convolutions concentrate
+their energy in one or two coordinates because the kernel is small;
+large-fan-in linear layers spread their energy across many coordinates
+and therefore favor L2 normalization. The two mechanisms reinforce
+each other on the same set of layers, which is why the boundary is so
+sharp.
+
+\subsection{Mechanism 3: regime change as the bit budget grows}
+\label{app:regime-change}
+
+A mixed architecture such as EfficientNet-B0 contains layers in three
+fan-in regimes simultaneously: pointwise convolutions in the
+$d \geq 96$ regime, depthwise convolutions at $d \in \{9, 25\}$, and
+squeeze-excitation bottlenecks at $d \in \{4, 8, 16, 32\}$. The
+total quantization-induced accuracy drop is approximately the sum of
+per-layer contributions, weighted by each layer's downstream
+sensitivity.
+
+As the bit budget grows from four to six to eight, all three regimes
+move toward zero error, but they do so at different rates. The
+large-$d$ regime saturates first, because both rotation methods reach
+near-FP32 reconstruction on those layers as soon as the per-coordinate
+error falls below the per-row signal-to-noise threshold. The small-$d$
+regimes saturate later, because the codebook mismatch in
+Mechanism~\ref{app:beta-failure} is bit-rate-independent: a flat Beta
+density does not become more concentrated when more bits are
+available. QuaRot-RTN, lacking this bit-rate-independent penalty,
+catches up to FP32 on the small-$d$ layers faster.
+
+The empirical signature of this regime change is visible in the
+EfficientNet-B0 numbers reported in
+Section~\ref{sec:experiments-vision}. At four-bit, where the
+pointwise-convolution error dominates, SphereQuant outperforms
+QuaRot-RTN by 31.2 percentage points. At six-bit, where the pointwise
+convolutions are saturated and the depthwise plus squeeze-excitation
+error dominates, QuaRot-RTN wins by 2.5 percentage points. At
+eight-bit the gap narrows to 0.7 points in favor of QuaRot-RTN as
+both methods approach FP32. The same regime change explains the
+absence of an analogous reversal on TinyLlama and Phi-1.5: every
+linear layer in both models sits in the favorable regime, so there is
+no second regime to come dominant as the budget grows.
+
+\subsection{A practical layer-adaptive dispatch}
+\label{app:hybrid}
+
+The three mechanisms above suggest a simple deployment recipe.
+Before quantizing, inspect each layer's fan-in $d$. Apply SphereQuant
+when $d \geq 32$ and fall back to QuaRot-RTN when $d < 32$. The
+threshold is chosen at the boundary where the Beta standard deviation
+on $[-1, 1]$ exceeds $0.17$ and the empirical advantage over a uniform
+grid disappears. The dispatch rule itself requires no calibration
+data, only the layer's fan-in. We expect this hybrid to recover the
+architectural-boundary losses on MobileNet-V2 and EfficientNet-B0
+without sacrificing the gains in the large-$d$ regime that SphereQuant
+provides on every other architecture in our study, but a complete
+evaluation across all six bit widths and all six architectures is
+left to future work.
+
+\subsection{Empirical Lloyd--Max as a fallback codebook}
+\label{app:empirical-lloyd}
+
+A second avenue for closing the boundary gap is to replace the
+asymptotic Beta codebook with an empirical Lloyd--Max codebook fit to
+the actual post-rotation coordinate histogram of each layer. The
+empirical codebook adapts to small-$d$ departures from the Beta limit,
+recovers the Lloyd--Max optimality guarantee for whatever the layer's
+post-rotation density actually is, and remains training-free in the
+sense that the codebook is constructed entirely from the model's own
+weights. The codebook construction is one-time per layer: collect the
+flattened post-rotation coordinates of all rows, run a few iterations
+of Lloyd--Max with $2^b$ levels, and store the resulting centroids
+alongside the codes. Storage cost grows by one centroid table per
+unique layer rather than one per unique fan-in, which is bounded above
+by the number of layers in the model and is negligible compared to
+the weight tensor.
+
+We do not report a full evaluation of the empirical Lloyd--Max
+codebook in this paper because the asymptotic Beta codebook is
+sufficient for the architectures where SphereQuant is most useful. The
+empirical alternative is the natural construction for a follow-up
+study targeting the depthwise-separable regime.
+
+\subsection{Summary}
+
+The architectural boundary that limits SphereQuant on MobileNet-V2 and
+on EfficientNet-B0 at higher bit widths is fully characterized by the
+three mechanisms above and is consistent with the geometric argument
+in Section~\ref{sec:method-boundary}. The boundary is not a defect of
+the method; it is the prediction of the same mathematics that
+motivates the construction. Two adaptations,
+Sections~\ref{app:hybrid} and \ref{app:empirical-lloyd}, would close
+the gap without sacrificing the wide-fan-in gains, at the cost of
+small additional bookkeeping. We leave their empirical evaluation to
+future work and include the present analysis to make the boundary
+behavior fully explicable from the geometry alone.

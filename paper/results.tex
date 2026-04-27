@@ -363,6 +363,50 @@ quantization error budget at the chosen bit width, which itself shifts
 with bit width because the regimes saturate at different rates.
 Appendix~\ref{app:boundary} decomposes this regime change in detail.
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_rotation_distributions_vision.png}
+\caption{Per-row L2-normalized weight coordinate distributions, before
+and after SphereQuant's rotation, for three representative layers per
+ImageNet model spanning the fan-in range. Blue is the pre-rotation
+empirical histogram, orange is the post-rotation histogram, the red
+curve is the predicted Beta$(d/2, d/2)$ density. Large-$d$ panels
+(right columns of upper rows, all of ViT-B/16) show the post-rotation
+histogram locking tightly onto Beta. Small-$d$ panels (leftmost
+columns of MobileNet-V2 and EfficientNet-B0 at $d{=}9$) show the
+boundary failure: Beta itself is broad and the post-rotation
+distribution is nearly flat, so the matched codebook degenerates
+toward uniform spacing and offers no advantage over QuaRot.}
+\label{fig:rotation-vision}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/fig_rotation_distributions_llm.png}
+\caption{Same diagnostic for TinyLlama 1.1B and Phi-1.5 1.3B,
+showing the attention $q$-projection and two MLP projections per
+model. Every linear layer in both models sits in the
+$d \in \{2048, 5632, 8192\}$ regime, the post-rotation
+histograms lock onto a sharp Beta in every panel, and there are no
+small-$d$ failure modes of the kind visible in
+Figure~\ref{fig:rotation-vision}. The TinyLlama $q$-projection has a
+pronounced near-zero spike before rotation that the rotation
+redistributes into the Beta envelope, an instructive visualization of
+what the rotation does to outlier-concentrated weight rows.}
+\label{fig:rotation-llm}
+\end{figure}
+
+Figures~\ref{fig:rotation-vision} and \ref{fig:rotation-llm} make the
+boundary visible at a glance. The narrowness of Beta$(d/2, d/2)$
+relative to the codebook's $[-1, 1]$ support is the geometric content
+of Table~\ref{tab:fanin-beta}: when the density occupies essentially
+the central tenth of the codebook range (as for $d \geq 96$), the
+Lloyd-Max levels cluster where probability mass actually lives and
+provide a meaningful gain over a uniform grid; when the density
+occupies more than half the codebook range (as for $d = 9$), the
+Lloyd-Max levels are nearly evenly spaced and the matched codebook
+collapses onto QuaRot's uniform alternative.
+
 The practical rule from these observations is that SphereQuant should be
 preferred on architectures whose dominant layer fan-in is at least
 100, and QuaRot-RTN should be preferred on architectures dominated by
