@@ -1,0 +1,47 @@
+# Byte-compiled
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Datasets that scripts re-download
+experiments/cnn_init_rotation/data/
+
+# Raw per-sample score arrays (regenerable from results.jsonl + scripts; ~30 MB)
+**/results/scores/
+
+# Sweep / run logs (kept on disk for local reference, not in git)
+**/*.log
+
+# Model checkpoints
+*.pt
+*.pth
+*.ckpt
+*.safetensors

@@ -1,0 +1,336 @@
+% =============================================================================
+% Bibliography for the H2 paper.
+% Covers every citation in methodology.tex and related_works.tex.
+% =============================================================================
+
+% ---------- Rotation-based quantization ----------
+
+@inproceedings{ashkboos2024quarot,
+  author    = {Ashkboos, Saleh and Mohtashami, Amirkeivan and Croci, Maximilian L. and
+               Li, Bo and Jaggi, Martin and Alistarh, Dan and Hoefler, Torsten and
+               Hensman, James},
+  title     = {{QuaRot}: Outlier-Free 4-Bit Inference in Rotated {LLMs}},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024},
+}
+
+@article{liu2024spinquant,
+  author  = {Liu, Zechun and Zhao, Changsheng and Huang, Igor and Harris, Sijia and
+             Li, Yuandong and Lee, Hen-Hsen and Kim, Bram and others},
+  title   = {{SpinQuant}: {LLM} Quantization with Learned Rotations},
+  journal = {arXiv preprint arXiv:2405.16406},
+  year    = {2024},
+}
+
+@inproceedings{chee2023quip,
+  author    = {Chee, Jerry and Cai, Yaohui and Kuleshov, Volodymyr and
+               De Sa, Christopher},
+  title     = {{QuIP}: 2-Bit Quantization of Large Language Models with Guarantees},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023},
+}
+
+@article{tseng2024quipsharp,
+  author  = {Tseng, Albert and Chee, Jerry and Sun, Qingyao and Kuleshov, Volodymyr and
+             De Sa, Christopher},
+  title   = {{QuIP\#}: Even Better {LLM} Quantization with Hadamard Incoherence and
+             Lattice Codebooks},
+  journal = {arXiv preprint arXiv:2402.04396},
+  year    = {2024},
+}
+
+% ---------- TurboQuant and related embedding compression ----------
+% Placeholder. Replace with the correct TurboQuant citation once the paper's
+% arXiv identifier or conference venue is finalized.
+@misc{turboquant,
+  author       = {TurboQuant Authors},
+  title        = {{TurboQuant}: Optimal Scalar Quantization for Unit-Norm Embeddings
+                  via Isotropic Rotation},
+  howpublished = {arXiv preprint},
+  year         = {2024},
+  note         = {Placeholder citation; replace with published reference.},
+}
+
+% ---------- Weight-only PTQ (LLM) ----------
+
+@article{frantar2022gptq,
+  author  = {Frantar, Elias and Ashkboos, Saleh and Hoefler, Torsten and Alistarh, Dan},
+  title   = {{GPTQ}: Accurate Post-Training Quantization for Generative Pre-trained
+             Transformers},
+  journal = {International Conference on Learning Representations (ICLR)},
+  year    = {2023},
+}
+
+@inproceedings{lin2023awq,
+  author    = {Lin, Ji and Tang, Jiaming and Tang, Haotian and Yang, Shang and
+               Chen, Wei-Ming and Wang, Wei-Chen and Xiao, Guangxuan and Dang, Xingyu and
+               Gan, Chuang and Han, Song},
+  title     = {{AWQ}: Activation-aware Weight Quantization for {LLM} Compression and
+               Acceleration},
+  booktitle = {Proceedings of Machine Learning and Systems (MLSys)},
+  year      = {2024},
+}
+
+@inproceedings{xiao2023smoothquant,
+  author    = {Xiao, Guangxuan and Lin, Ji and Seznec, Mickael and Wu, Hao and
+               Demouth, Julien and Han, Song},
+  title     = {{SmoothQuant}: Accurate and Efficient Post-Training Quantization for
+               Large Language Models},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2023},
+}
+
+@misc{badri2023hqq,
+  author       = {Badri, Hicham and Shaji, Appu},
+  title        = {{HQQ}: Half-Quadratic Quantization of Large Machine Learning Models},
+  howpublished = {\url{https://mobiusml.github.io/hqq_blog/}},
+  year         = {2023},
+}
+
+@inproceedings{shao2024omniquant,
+  author    = {Shao, Wenqi and Chen, Mengzhao and Zhang, Zhaoyang and Xu, Peng and
+               Zhao, Lirui and Li, Zhiqian and Zhang, Kaipeng and Gao, Peng and Qiao, Yu
+               and Luo, Ping},
+  title     = {{OmniQuant}: Omnidirectionally Calibrated Quantization for Large
+               Language Models},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024},
+}
+
+% ---------- PTQ for computer vision (CNN) ----------
+
+@inproceedings{li2021brecq,
+  author    = {Li, Yuhang and Gong, Ruihao and Tan, Xu and Yang, Yang and Hu, Peng and
+               Zhang, Qi and Yu, Fengwei and Wang, Wei and Gu, Shi},
+  title     = {{BRECQ}: Pushing the Limit of Post-Training Quantization by Block
+               Reconstruction},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+@inproceedings{nagel2020adaround,
+  author    = {Nagel, Markus and Amjad, Rana Ali and van Baalen, Mart and
+               Louizos, Christos and Blankevoort, Tijmen},
+  title     = {Up or Down? {A}daptive Rounding for Post-Training Quantization},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2020},
+}
+
+@inproceedings{wei2022qdrop,
+  author    = {Wei, Xiuying and Gong, Ruihao and Li, Yuhang and Liu, Xianglong and
+               Yu, Fengwei},
+  title     = {{QDrop}: Randomly Dropping Quantization for Extremely Low-bit
+               Post-Training Quantization},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2022},
+}
+
+@inproceedings{dong2019hawq,
+  author    = {Dong, Zhen and Yao, Zhewei and Gholami, Amir and
+               Mahoney, Michael W. and Keutzer, Kurt},
+  title     = {{HAWQ}: {H}essian Aware Quantization of Neural Networks with
+               Mixed-Precision},
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer
+               Vision (ICCV)},
+  year      = {2019},
+}
+
+@inproceedings{nagel2019dfq,
+  author    = {Nagel, Markus and van Baalen, Mart and Blankevoort, Tijmen and
+               Welling, Max},
+  title     = {Data-Free Quantization through Weight Equalization and Bias Correction},
+  booktitle = {Proceedings of the IEEE/CVF International Conference on Computer
+               Vision (ICCV)},
+  year      = {2019},
+}
+
+@article{choi2018pact,
+  author  = {Choi, Jungwook and Wang, Zhuo and Venkataramani, Swagath and
+             Chuang, Pierce I-Jen and Srinivasan, Vijayalakshmi and
+             Gopalakrishnan, Kailash},
+  title   = {{PACT}: Parameterized Clipping Activation for Quantized Neural Networks},
+  journal = {arXiv preprint arXiv:1805.06885},
+  year    = {2018},
+}
+
+% ---------- Classical scalar quantization theory ----------
+
+@article{lloyd1982,
+  author    = {Lloyd, Stuart P.},
+  title     = {Least squares quantization in {PCM}},
+  journal   = {IEEE Transactions on Information Theory},
+  volume    = {28},
+  number    = {2},
+  pages     = {129--137},
+  year      = {1982},
+  publisher = {IEEE},
+  note      = {Originally a 1957 Bell Labs memo.},
+}
+
+@article{max1960,
+  author    = {Max, Joel},
+  title     = {Quantizing for minimum distortion},
+  journal   = {IRE Transactions on Information Theory},
+  volume    = {6},
+  number    = {1},
+  pages     = {7--12},
+  year      = {1960},
+  publisher = {IEEE},
+}
+
+@article{bennett1948,
+  author    = {Bennett, W. R.},
+  title     = {Spectra of quantized signals},
+  journal   = {Bell System Technical Journal},
+  volume    = {27},
+  number    = {3},
+  pages     = {446--472},
+  year      = {1948},
+  publisher = {Wiley Online Library},
+}
+
+@article{panter1951,
+  author    = {Panter, P. F. and Dite, W.},
+  title     = {Quantization distortion in pulse-count modulation with nonuniform
+               spacing of levels},
+  journal   = {Proceedings of the IRE},
+  volume    = {39},
+  number    = {1},
+  pages     = {44--48},
+  year      = {1951},
+  publisher = {IEEE},
+}
+
+@article{fleischer1964,
+  author  = {Fleischer, Peter E.},
+  title   = {Sufficient conditions for achieving minimum distortion in a quantizer},
+  journal = {IEEE International Convention Record},
+  volume  = {12},
+  pages   = {104--111},
+  year    = {1964},
+}
+
+@article{kieffer1983,
+  author    = {Kieffer, John C.},
+  title     = {Uniqueness of locally optimal quantizer for log-concave density and
+               convex error weighting function},
+  journal   = {IEEE Transactions on Information Theory},
+  volume    = {29},
+  number    = {1},
+  pages     = {42--47},
+  year      = {1983},
+  publisher = {IEEE},
+}
+
+@book{gershogray1992,
+  author    = {Gersho, Allen and Gray, Robert M.},
+  title     = {Vector Quantization and Signal Compression},
+  publisher = {Kluwer Academic Publishers},
+  year      = {1992},
+}
+
+% ---------- Random matrix / Haar measure ----------
+
+@article{mezzadri2007,
+  author  = {Mezzadri, Francesco},
+  title   = {How to generate random matrices from the classical compact groups},
+  journal = {Notices of the American Mathematical Society},
+  volume  = {54},
+  number  = {5},
+  pages   = {592--604},
+  year    = {2007},
+}
+
+@inproceedings{ailon2006srht,
+  author    = {Ailon, Nir and Chazelle, Bernard},
+  title     = {Approximate nearest neighbors and the fast {J}ohnson-{L}indenstrauss
+               transform},
+  booktitle = {ACM Symposium on Theory of Computing (STOC)},
+  year      = {2006},
+}
+
+% ---------- Vision backbones ----------
+
+@inproceedings{he2016resnet,
+  author    = {He, Kaiming and Zhang, Xiangyu and Ren, Shaoqing and Sun, Jian},
+  title     = {Deep Residual Learning for Image Recognition},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2016},
+}
+
+@inproceedings{dosovitskiy2021vit,
+  author    = {Dosovitskiy, Alexey and Beyer, Lucas and Kolesnikov, Alexander and
+               Weissenborn, Dirk and Zhai, Xiaohua and Unterthiner, Thomas and
+               Dehghani, Mostafa and Minderer, Matthias and Heigold, Georg and
+               Gelly, Sylvain and others},
+  title     = {An Image is Worth 16x16 Words: {T}ransformers for Image Recognition at
+               Scale},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021},
+}
+
+@inproceedings{liu2022convnext,
+  author    = {Liu, Zhuang and Mao, Hanzi and Wu, Chao-Yuan and Feichtenhofer, Christoph
+               and Darrell, Trevor and Xie, Saining},
+  title     = {A {C}onv{N}et for the 2020s},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2022},
+}
+
+@inproceedings{sandler2018mobilenetv2,
+  author    = {Sandler, Mark and Howard, Andrew and Zhu, Menglong and Zhmoginov, Andrey
+               and Chen, Liang-Chieh},
+  title     = {{MobileNetV2}: Inverted Residuals and Linear Bottlenecks},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2018},
+}
+
+@inproceedings{tan2019efficientnet,
+  author    = {Tan, Mingxing and Le, Quoc V.},
+  title     = {{EfficientNet}: Rethinking Model Scaling for Convolutional Neural
+               Networks},
+  booktitle = {International Conference on Machine Learning (ICML)},
+  year      = {2019},
+}
+
+% ---------- Language models ----------
+
+@misc{tinyllama2024,
+  author       = {Zhang, Peiyuan and Zeng, Guangtao and Wang, Tianduo and Lu, Wei},
+  title        = {{TinyLlama}: An Open-Source Small Language Model},
+  howpublished = {arXiv preprint arXiv:2401.02385},
+  year         = {2024},
+}
+
+@article{li2023phi15,
+  author  = {Li, Yuanzhi and Bubeck, S{\'e}bastien and Eldan, Ronen and
+             Del Giorno, Allie and Gunasekar, Suriya and Lee, Yin Tat},
+  title   = {Textbooks Are All You Need {II}: phi-1.5 technical report},
+  journal = {arXiv preprint arXiv:2309.05463},
+  year    = {2023},
+}
+
+@article{touvron2023llama,
+  author  = {Touvron, Hugo and Martin, Louis and Stone, Kevin and Albert, Peter and
+             Almahairi, Amjad and Babaei, Yasmine and Bashlykov, Nikolay and others},
+  title   = {{Llama 2}: Open Foundation and Fine-Tuned Chat Models},
+  journal = {arXiv preprint arXiv:2307.09288},
+  year    = {2023},
+}
+
+% ---------- Datasets ----------
+
+@article{deng2009imagenet,
+  author  = {Deng, Jia and Dong, Wei and Socher, Richard and Li, Li-Jia and Li, Kai and
+             Fei-Fei, Li},
+  title   = {{ImageNet}: A Large-Scale Hierarchical Image Database},
+  journal = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year    = {2009},
+}
+
+@article{merity2017wikitext,
+  author  = {Merity, Stephen and Xiong, Caiming and Bradbury, James and Socher, Richard},
+  title   = {Pointer Sentinel Mixture Models},
+  journal = {International Conference on Learning Representations (ICLR)},
+  year    = {2017},
+}
