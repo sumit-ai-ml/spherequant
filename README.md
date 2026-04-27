@@ -143,20 +143,6 @@ The 2-bit Phi-1.5 result (77 vs 74,000) is the most dramatic: SphereQuant
 is the only training-free method that produces a usable 2-bit causal LM at
 this scale.
 
-### CIFAR-10 toy (3-layer CNN, mean ± std over 3 seeds)
-
-FP32 baseline: 75.91%
-
-| bits | Baseline (no rot) | SphereQuant (ours) | H3 (rotated basis) |
-|-----:|------------------:|-------------------:|-------------------:|
-| 2 | 37.79 ± 8.95 | 46.84 ± 7.64 | 45.85 ± 5.96 |
-| 4 | 69.94 ± 1.66 | 72.56 ± 2.41 | 74.12 ± 0.91 |
-| 6 | 73.59 ± 0.45 | 74.87 ± 0.43 | 76.68 ± 0.66 |
-| 8 | 74.35 ± 0.47 | 75.31 ± 0.30 | 76.91 ± 0.68 |
-
-H3 is an ablation that trains directly in the rotated basis, included for
-comparison; not the headline method.
-
 ## Reproducing the experiments
 
 ImageNet-1k vision sweep (RTN-absmax, QuaRot, SphereQuant; bits 2/4/6/8):
