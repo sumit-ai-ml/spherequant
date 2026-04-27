@@ -30,6 +30,10 @@ experiments = [
     "safetensors>=0.4",
     "accelerate>=0.28",
 ]
+test = [
+    "pytest>=7.0",
+    "torchvision>=0.16",
+]
 
 [tool.setuptools.packages.find]
 include = ["spherequant*"]

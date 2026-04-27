@@ -47,6 +47,39 @@ Should print `All sanity checks passed.` in under a minute on CPU. Verifies
 SRHT round-trip, Beta-codebook symmetry, KS fit on rotated random unit
 vectors, and the rotated-basis (H3) reparameterization.
 
+## Will SphereQuant work on my model?
+
+SphereQuant's edge over QuaRot depends on per-layer fan-in d. The paper
+shows the method works decisively at d >= 100 and fails on depthwise
+convolutions with d = 9. Run the audit before quantizing:
+
+    from spherequant import audit
+    import torchvision.models as tvm
+
+    model = tvm.mobilenet_v2(weights=None)
+    audit(model)
+
+The output is a per-layer table plus an overall verdict:
+- GOOD: SphereQuant strongly preferred
+- MARGINAL: mixed-d model, consider per-layer policy
+- BAD: use QuaRot instead
+
+Verdicts have been validated against all six architectures in the paper.
+ResNet-18/50, ViT-B/16, and ConvNeXt-Tiny audit as GOOD; MobileNet-V2 and
+EfficientNet-B0 audit as BAD, matching the paper's accuracy results.
+
+The audit is also wired into the unified `quantize_model` entry point:
+
+    from spherequant import quantize_model
+    quantize_model(model, bits=4)  # raises SphereQuantPreflightWarning on BAD
+
+Pass `preflight=False` to override, or use `method="quarot"` instead.
+
+CLI:
+
+    python -m spherequant.audit --model resnet50
+    python -m spherequant.audit --checkpoint path/to/full_module.pt
+
 ## Headline results
 
 ### Vision: ImageNet-1k top-1 accuracy (Beta codebook, training-free)
