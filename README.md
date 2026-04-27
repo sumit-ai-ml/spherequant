@@ -81,6 +81,27 @@ CLI:
     python -m spherequant.audit --checkpoint path/to/full_module.pt
     python -m spherequant.audit --hf-model TinyLlama/TinyLlama-1.1B-Chat-v1.0
 
+### Verdicts on the six paper architectures + LLMs
+
+Verified against the audit shipped in this repo:
+
+| Model | Quantizable layers | GOOD | MARG | BAD | of which depthwise | Param mass in BAD | Verdict |
+|---|---:|---:|---:|---:|---:|---:|:---:|
+| ResNet-18 | 21 | 20 | 1 | 0 | 0 | 0.00% | **GOOD** |
+| ResNet-50 | 54 | 49 | 5 | 0 | 0 | 0.00% | **GOOD** |
+| ViT-B/16 | 49 | 49 | 0 | 0 | 0 | 0.00% | **GOOD** |
+| ConvNeXt-Tiny (7×7 depthwise) | 59 | 37 | 22 | 0 | 0 | 0.00% | **GOOD** |
+| MobileNet-V2 (3×3 depthwise) | 53 | 20 | 12 | 21 | 17 | 2.12% | **BAD** |
+| EfficientNet-B0 | 82 | 37 | 13 | 32 | 16 | 5.42% | **BAD** |
+| TinyLlama 1.1B | 155 | 155 | 0 | 0 | 0 | 0.00% | **GOOD** |
+| Phi-1.5 1.3B | 145 | 145 | 0 | 0 | 0 | 0.00% | **GOOD** |
+
+Notes:
+
+- **ConvNeXt-Tiny is GOOD even though it's depthwise-heavy.** Its kernels are 7×7 (d=49), which the audit places in MARGINAL — well above the d=9 failure case of MobileNet's 3×3 depthwise. Don't conflate "depthwise" with "BAD"; the audit only flags d < 32.
+- **MobileNet-V2's BAD verdict comes from the layer-count signal, not the param signal.** Only 2.1% of params live in BAD layers, but those 21 layers are 39.6% of the layer count and sit in every forward path. The dual-signal rule (param-weighted >30% **or** layer-count >20%) is what catches this; param count alone would miss it.
+- **Every transformer linear is in the favorable regime.** TinyLlama and Phi-1.5 audit as 100% GOOD with zero MARGINAL or BAD layers. LLaMA-style architectures use individual `q_proj` / `k_proj` / `v_proj` / `o_proj` Linears (not `nn.MultiheadAttention`) and the audit picks them up automatically through the standard `nn.Linear` branch.
+
 ## Headline results
 
 ### Vision: ImageNet-1k top-1 accuracy (Beta codebook, training-free)
