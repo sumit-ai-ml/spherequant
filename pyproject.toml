@@ -7,12 +7,12 @@ name = "spherequant"
 version = "0.1.0"
 description = "Training-free post-training weight quantization via rotation + Beta-matched scalar codebook"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 license = { text = "MIT" }
 dependencies = [
     "torch>=2.1",
     "numpy>=1.24",
-    "scipy>=1.11",
+    "scipy>=1.10",
 ]
 
 [project.optional-dependencies]
