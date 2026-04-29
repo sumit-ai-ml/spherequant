@@ -6,9 +6,10 @@
 #SBATCH --time=72:00:00
 #SBATCH --partition=ml4good
 #SBATCH --gres=gpu:l40s:1
-#SBATCH --ntasks=16
-#SBATCH --mem=192GB
 #SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=192GB
 #SBATCH --exclude=hendrixgpu26fl
 # Logs land at /home/pds981/spherequant/logs/sq_llm_8b_<JOBID>.{out,err}
 # regardless of which directory you run `sbatch` from.
@@ -62,8 +63,9 @@ METHODS=${METHODS:-"rtn_absmax quarot spherequant"}
 ROTATION_SEED=${ROTATION_SEED:-0}
 LM_EVAL_FLAG=${LM_EVAL_FLAG:-""}    # set to "--lm-eval" to add zero-shot tasks
 
-# run_llama.py lives next to this script.
-cd "$(dirname "$0")"
+# Absolute path to run_llama.py — independent of #SBATCH --chdir, of where
+# `sbatch` was invoked from, and of how SLURM populates $0.
+RUN_LLAMA=/home/pds981/spherequant/experiments/llm_ptq/hendrix/run_llama.py
 
 for MODEL in $MODELS; do
     echo "==================================================================="
@@ -75,7 +77,7 @@ for MODEL in $MODELS; do
     echo "Started:        $(date)"
     echo "==================================================================="
 
-    srun python -u run_llama.py \
+    srun python -u "$RUN_LLAMA" \
         --model "$MODEL" \
         --bits $BITS \
         --methods $METHODS \
