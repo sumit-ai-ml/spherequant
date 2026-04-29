@@ -240,7 +240,7 @@ def sweep(model_id: str, bits_list, methods, run_lm_eval: bool,
     t0 = time.time()
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     model = AutoModelForCausalLM.from_pretrained(
-        model_id, dtype=torch.float16, device_map="auto", low_cpu_mem_usage=True,
+        model_id, torch_dtype=torch.float16, device_map="auto", low_cpu_mem_usage=True,
     )
     model.eval()
     print(f"    loaded in {time.time()-t0:.1f}s. "
