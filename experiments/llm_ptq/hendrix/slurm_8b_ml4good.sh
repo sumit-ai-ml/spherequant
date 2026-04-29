@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=sq_llm_8b
-#SBATCH --output=logs/sq_llm_8b_%j.out
-#SBATCH --error=logs/sq_llm_8b_%j.err
+#SBATCH --chdir=/home/pds981/spherequant
+#SBATCH --output=/home/pds981/spherequant/logs/sq_llm_8b_%j.out
+#SBATCH --error=/home/pds981/spherequant/logs/sq_llm_8b_%j.err
 #SBATCH --time=72:00:00
 #SBATCH --partition=ml4good
 #SBATCH --gres=gpu:l40s:1
@@ -9,6 +10,11 @@
 #SBATCH --mem=192GB
 #SBATCH --nodes=1
 #SBATCH --exclude=hendrixgpu26fl
+# Logs land at /home/pds981/spherequant/logs/sq_llm_8b_<JOBID>.{out,err}
+# regardless of which directory you run `sbatch` from.
+# Other users: edit the three /home/pds981/spherequant paths above to point
+# at your own checkout, or replace them with $HOME/spherequant if SLURM on
+# your cluster expands env vars in #SBATCH directives (most don't).
 
 # ---------------------------------------------------------------------------
 # SphereQuant PTQ sweep on 7-8B causal LMs on the ml4good partition (L40s).
