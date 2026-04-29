@@ -32,7 +32,7 @@ experiments/
 ## Setup
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python -m venv spherequant && source spherequant/bin/activate
 pip install -e .                   # installs the spherequant package
 pip install -r requirements.txt    # pulls torchvision, transformers, etc. for experiments
 ```
