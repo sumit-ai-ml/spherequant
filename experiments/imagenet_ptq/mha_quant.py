@@ -7,7 +7,7 @@ so the standard ptq.py iteration misses it.
 
 This module post-processes a quantized model: for every MultiheadAttention layer,
 treat in_proj_weight as a (3*embed_dim, embed_dim) Linear weight and quantize it
-with the same baseline / SphereQuant / QuaRot scheme used for the main model.
+with the same baseline / ApexQuant / QuaRot scheme used for the main model.
 
 Call AFTER quantize_model_{baseline, sq, quarot} so the MHA weights also get
 quantized rather than staying FP32.
@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 
 
-from spherequant.ptq import (  # noqa: E402
+from apexquant.ptq import (  # noqa: E402
     per_row_quantize, apply_rotation, make_rotation, SRHTRotation,
 )
 
@@ -53,7 +53,7 @@ def _quantize_in_proj_baseline(W: torch.Tensor, bits: int, codebook: str) -> tor
     return torch.from_numpy(W_rec).to(W.dtype).to(W.device)
 
 
-def _quantize_in_proj_spherequant(W: torch.Tensor, bits: int, codebook: str,
+def _quantize_in_proj_apexquant(W: torch.Tensor, bits: int, codebook: str,
                          rotation_seed: int, layer_idx: int) -> torch.Tensor:
     W_np = W.detach().cpu().numpy().astype(np.float32)
     N, d = W_np.shape
@@ -91,7 +91,7 @@ def quantize_mha_in_place(model: nn.Module, variant: str, bits: int,
                           codebook: str = "beta", rotation_seed: int = 0):
     """Mutate model: quantize every nn.MultiheadAttention.in_proj_weight.
 
-    variant: "baseline" | "spherequant" | "quarot"
+    variant: "baseline" | "apexquant" | "quarot"
     codebook: ignored for "quarot"; "uniform" or "beta" otherwise.
     """
     for layer_idx, (_, mha) in enumerate(_iter_mha(model)):
@@ -100,8 +100,8 @@ def quantize_mha_in_place(model: nn.Module, variant: str, bits: int,
         W = mha.in_proj_weight  # shape (3*embed_dim, embed_dim)
         if variant == "baseline":
             W_rec = _quantize_in_proj_baseline(W, bits, codebook)
-        elif variant == "spherequant":
-            W_rec = _quantize_in_proj_spherequant(W, bits, codebook,
+        elif variant == "apexquant":
+            W_rec = _quantize_in_proj_apexquant(W, bits, codebook,
                                           rotation_seed, layer_idx)
         elif variant == "quarot":
             W_rec = _quantize_in_proj_quarot(W, bits, rotation_seed, layer_idx)

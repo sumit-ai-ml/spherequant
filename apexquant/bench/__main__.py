@@ -1,4 +1,4 @@
-"""CLI entry point for ``python -m spherequant.bench``.
+"""CLI entry point for ``python -m apexquant.bench``.
 
 Dispatches between the vision and LLM benchmark paths. Supports two model
 sources:
@@ -13,7 +13,7 @@ sources:
     also need ``--tokenizer`` (a tokenizer repo ID or local path).
 
 For state-dict checkpoints, use the Python API directly — see
-``spherequant.bench.benchmark_image_classifier`` and
+``apexquant.bench.benchmark_image_classifier`` and
 ``benchmark_causal_lm``.
 """
 
@@ -32,7 +32,7 @@ def _detect_task(model_id: str) -> str:
         from transformers import AutoConfig
     except ImportError:
         raise SystemExit(
-            "spherequant.bench requires the transformers and datasets packages.\n"
+            "apexquant.bench requires the transformers and datasets packages.\n"
             "Install with: pip install transformers datasets"
         )
 
@@ -52,14 +52,14 @@ def _detect_task(model_id: str) -> str:
 
     raise SystemExit(
         f"Could not auto-detect task for {model_id!r}. "
-        f"architectures={archs}. spherequant.bench supports image classification "
+        f"architectures={archs}. apexquant.bench supports image classification "
         f"and causal LM only."
     )
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
-        prog="python -m spherequant.bench",
+        prog="python -m apexquant.bench",
         description="Audit, quantize, and benchmark a model end-to-end.",
     )
     src = p.add_mutually_exclusive_group(required=True)
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     src.add_argument("--checkpoint",
                      help="Path to a full nn.Module saved with torch.save(model, ...). "
                           "For state-dicts, use the Python API "
-                          "(spherequant.bench.benchmark_image_classifier / _causal_lm).")
+                          "(apexquant.bench.benchmark_image_classifier / _causal_lm).")
     p.add_argument("--task", choices=["image_classification", "causal_lm"],
                    default=None,
                    help="Required with --checkpoint; auto-detected with --hf-model.")
@@ -94,10 +94,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p.add_argument("--bits", type=int, nargs="+", default=[2, 4, 6, 8])
     p.add_argument("--methods", nargs="+",
-                   default=["spherequant", "quarot", "rtn_absmax"],
-                   choices=["spherequant", "quarot", "rtn_absmax", "baseline"])
+                   default=["apexquant", "quarot", "rtn_absmax"],
+                   choices=["apexquant", "quarot", "rtn_absmax", "baseline"])
     p.add_argument("--codebook", default="beta", choices=["beta", "uniform"],
-                   help="Codebook for spherequant/baseline. Ignored by "
+                   help="Codebook for apexquant/baseline. Ignored by "
                         "quarot/rtn_absmax.")
     p.add_argument("--rotation-seed", type=int, default=0)
     p.add_argument("--subset-size", type=int, default=None,
@@ -132,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Task: {task}  Device: {device}")
 
     if task == "image_classification":
-        from spherequant.bench import vision
+        from apexquant.bench import vision
         results = vision.run(
             model_id=args.hf_model,
             checkpoint_path=args.checkpoint,
@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
             preflight=not args.no_preflight,
         )
     else:
-        from spherequant.bench import llm
+        from apexquant.bench import llm
         results = llm.run(
             model_id=args.hf_model,
             checkpoint_path=args.checkpoint,
@@ -175,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
             preflight=not args.no_preflight,
         )
 
-    from spherequant.bench._eval import format_summary, write_jsonl
+    from apexquant.bench._eval import format_summary, write_jsonl
     print(format_summary(results))
     if args.out is not None:
         write_jsonl(results, args.out)

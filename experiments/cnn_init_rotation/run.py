@@ -1,5 +1,5 @@
 """Orchestrator: train baseline and H3 models for each seed, then run the PTQ
-sweep (bits x {uniform, beta} codebook x {baseline, SphereQuant, H3}).
+sweep (bits x {uniform, beta} codebook x {baseline, ApexQuant, H3}).
 
 Writes results/results.jsonl (one row per evaluation with accuracy + AUROC)
 and caches raw softmax scores under results/scores/ so new metrics can be
@@ -17,9 +17,9 @@ import numpy as np
 import torch
 
 from train import TrainConfig, get_dataloaders, train
-from spherequant.ptq import (
+from apexquant.ptq import (
     quantize_model_baseline,
-    quantize_model_spherequant,
+    quantize_model_apexquant,
     quantize_model_h3,
     eval_with_scores,
     compute_auroc_macro,
@@ -56,7 +56,7 @@ def run_ptq_sweep(variant_label: str, model, rotation_seed: int,
 
     variant_label drives the quantization path:
       - "baseline": quantize_model_baseline (no rotation)
-      - "spherequant":       quantize_model_spherequant (post-hoc rotation on baseline weights)
+      - "apexquant":       quantize_model_apexquant (post-hoc rotation on baseline weights)
       - "h3":       quantize_model_h3 (quantize U in a RotatedCNN3)
     """
     for bits in bits_list:
@@ -64,8 +64,8 @@ def run_ptq_sweep(variant_label: str, model, rotation_seed: int,
             t0 = time.time()
             if variant_label == "baseline":
                 model_q, stats = quantize_model_baseline(model, bits, codebook)
-            elif variant_label == "spherequant":
-                model_q, stats = quantize_model_spherequant(
+            elif variant_label == "apexquant":
+                model_q, stats = quantize_model_apexquant(
                     model, bits, codebook, rotation_seed=rotation_seed
                 )
             elif variant_label == "h3":
@@ -161,8 +161,8 @@ def main():
                       fp32_acc=fp32_acc_base, fp32_auroc=fp32_auroc_base,
                       seed=seed, epoch_history=res_base["history"])
 
-        # PTQ sweep: baseline with POST-HOC rotation (SphereQuant)
-        run_ptq_sweep("spherequant", res_base["model"], rotation_seed=seed,
+        # PTQ sweep: baseline with POST-HOC rotation (ApexQuant)
+        run_ptq_sweep("apexquant", res_base["model"], rotation_seed=seed,
                       test_loader=test_loader, device=device,
                       bits_list=args.bits, codebooks=args.codebooks,
                       fp32_acc=fp32_acc_base, fp32_auroc=fp32_auroc_base,

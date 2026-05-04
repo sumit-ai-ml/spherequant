@@ -22,12 +22,12 @@ def load_rows():
 METHOD_LABELS = {
     "rtn_absmax": "RTN (per-channel absmax, no rotation)",
     "quarot": "QuaRot (rotation + absmax uniform)",
-    "spherequant": "SphereQuant + Beta (ours)",
+    "apexquant": "ApexQuant + Beta (ours)",
 }
 METHOD_STYLES = {
     "rtn_absmax": {"color": "#888", "marker": "o", "linestyle": "-"},
     "quarot": {"color": "#1f77b4", "marker": "s", "linestyle": "-"},
-    "spherequant": {"color": "#d62728", "marker": "^", "linestyle": "-", "linewidth": 2},
+    "apexquant": {"color": "#d62728", "marker": "^", "linestyle": "-", "linewidth": 2},
 }
 
 
@@ -90,7 +90,7 @@ def print_table(rows):
           f"{'perplexity':>12} | {'% change':>9}")
     print("-"*90)
     for bits in [8, 6, 4, 2]:
-        for method in ["rtn_absmax", "quarot", "spherequant"]:
+        for method in ["rtn_absmax", "quarot", "apexquant"]:
             r = next((r for r in rows
                       if r["variant"] == method and r["bits"] == bits), None)
             if r is None: continue

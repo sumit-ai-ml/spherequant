@@ -12,7 +12,7 @@ Weight-only PTQ on:
 Methods:
 - **RTN baseline** (per-channel symmetric absmax uniform, no rotation)
 - **QuaRot-RTN** (rotation + per-channel absmax uniform)
-- **SphereQuant + Beta (ours)** (rotation + per-row L2 normalize + Beta codebook)
+- **ApexQuant + Beta (ours)** (rotation + per-row L2 normalize + Beta codebook)
 
 Bits: 2, 4, 6, 8
 Eval: WikiText-2 perplexity (standard LLM quantization benchmark)
@@ -43,8 +43,8 @@ Typical fan-ins for TinyLlama:
 
 ## What counts as success
 
-If 4-bit SphereQuant+Beta perplexity on WikiText-2 is within ~10% of FP16 perplexity
-(and comparable to QuaRot), the method generalizes. If 2-bit SphereQuant+Beta is
+If 4-bit ApexQuant+Beta perplexity on WikiText-2 is within ~10% of FP16 perplexity
+(and comparable to QuaRot), the method generalizes. If 2-bit ApexQuant+Beta is
 meaningfully usable (perplexity < 2× FP16), that's a headline finding.
 
 Reference numbers from the QuaRot paper for Llama-2 7B (not our model, but

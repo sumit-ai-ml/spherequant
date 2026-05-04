@@ -3,7 +3,7 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "spherequant"
+name = "apexquant"
 version = "0.1.0"
 description = "Training-free post-training weight quantization via rotation + Beta-matched scalar codebook"
 readme = "README.md"
@@ -36,4 +36,4 @@ test = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["spherequant*"]
+include = ["apexquant*"]

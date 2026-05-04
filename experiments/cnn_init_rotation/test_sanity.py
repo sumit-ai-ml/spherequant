@@ -30,7 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from model import CNN3  # noqa: E402
 from rotated_conv import RotatedConv2d, RotatedLinear  # noqa: E402
-from spherequant.rotation_utils import (  # noqa: E402
+from apexquant.rotation_utils import (  # noqa: E402
     make_rotation,
     apply_rotation,
     materialize_rotation_matrix,
@@ -39,7 +39,7 @@ from spherequant.rotation_utils import (  # noqa: E402
     torch_inverse_rotation,
     SRHTRotation,
 )
-from spherequant.ptq import (  # noqa: E402
+from apexquant.ptq import (  # noqa: E402
     uniform_codebook,
     beta_codebook,
     per_row_quantize,
@@ -160,7 +160,7 @@ def test_seed_repro():
 
 def test_ks_runs():
     print("6. Beta-KS test runs on rotated random unit vectors")
-    from spherequant.rotation_utils import beta_ks_test
+    from apexquant.rotation_utils import beta_ks_test
     rng = np.random.RandomState(0)
     d = 128
     X = rng.randn(1000, d).astype(np.float32)

@@ -16,7 +16,7 @@ import torch
 
 _THIS = Path(__file__).resolve().parent
 
-from spherequant.ptq import quantize_model_spherequant  # noqa: E402
+from apexquant.ptq import quantize_model_apexquant  # noqa: E402
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits
@@ -87,7 +87,7 @@ def main():
                 seed_top1s = []
                 for seed in args.seeds:
                     t0 = time.time()
-                    model_q, stats = quantize_model_spherequant(
+                    model_q, stats = quantize_model_apexquant(
                         model, bits, cb, rotation_seed=seed)
                     model_q = model_q.to(device)
                     top1, top5, n = eval_top1_top5(model_q, loader, device)
@@ -99,7 +99,7 @@ def main():
                           f"[{time.time()-t0:.0f}s]")
                     append_result({
                         "model": model_name,
-                        "variant": "spherequant",
+                        "variant": "apexquant",
                         "bits": bits,
                         "codebook": cb,
                         "top1": top1,

@@ -17,7 +17,7 @@ import torch
 
 _THIS = Path(__file__).resolve().parent
 
-from spherequant.ptq import quantize_model_quarot  # noqa: E402
+from apexquant.ptq import quantize_model_quarot  # noqa: E402
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits

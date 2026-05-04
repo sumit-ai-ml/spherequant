@@ -4,13 +4,13 @@ Three figures:
 
   fig_acc_vs_bits.png
     Mean accuracy drop vs bits for each (variant, codebook), seeds averaged.
-    This is the headline comparison: does rotation (SphereQuant) or rotated-basis
+    This is the headline comparison: does rotation (ApexQuant) or rotated-basis
     training (H3) reduce the accuracy drop from quantization?
 
   fig_weight_histograms.png
     Density of weight coordinates for each layer under three views:
       - baseline: flattened W_flat (per-row L2-normalized) coords
-      - SphereQuant:       baseline weight after post-hoc rotation, normalized rows
+      - ApexQuant:       baseline weight after post-hoc rotation, normalized rows
       - H3:       trained U (already rotated) normalized rows
     Overlay Beta(d/2, d/2) PDF for reference.
 
@@ -33,7 +33,7 @@ import torch
 
 from model import CNN3
 from rotated_conv import RotatedCNN3
-from spherequant.rotation_utils import make_rotation, apply_rotation, SRHTRotation
+from apexquant.rotation_utils import make_rotation, apply_rotation, SRHTRotation
 
 
 RESULTS_FILE = Path(__file__).resolve().parent / "results" / "results.jsonl"
@@ -71,7 +71,7 @@ def _plot_drop_vs_bits(rows, metric_key: str, ylabel: str, title: str,
     for ax, codebook in zip(axes, ["uniform", "beta"]):
         for variant, marker, color in [
             ("baseline", "o", "#888888"),
-            ("spherequant", "s", "#1f77b4"),
+            ("apexquant", "s", "#1f77b4"),
             ("h3", "^", "#d62728"),
         ]:
             bits_list, mean_drop, std_drop = [], [], []
@@ -138,7 +138,7 @@ def fig_auroc_absolute(rows):
     for ax, codebook in zip(axes, ["uniform", "beta"]):
         for variant, marker, color in [
             ("baseline", "o", "#888888"),
-            ("spherequant", "s", "#1f77b4"),
+            ("apexquant", "s", "#1f77b4"),
             ("h3", "^", "#d62728"),
         ]:
             bits_list, mean, std = [], [], []
@@ -206,7 +206,7 @@ def fig_weight_histograms(seed: int = 0):
         # baseline normalized coords
         coords_b = _unit_row_coords(Wb)
 
-        # SphereQuant: rotate baseline then normalize
+        # ApexQuant: rotate baseline then normalize
         rot = make_rotation(d, seed * 1000 + i + 1, "srht")
         Wb_rot = apply_rotation(Wb.astype(np.float32), rot)
         coords_h2 = _unit_row_coords(Wb_rot)
@@ -218,7 +218,7 @@ def fig_weight_histograms(seed: int = 0):
         ax.hist(coords_b, bins=bins, density=True, alpha=0.35, color="#888888",
                 label="baseline W (unit-row)")
         ax.hist(coords_h2, bins=bins, density=True, alpha=0.35, color="#1f77b4",
-                label="SphereQuant rot(W) (unit-row)")
+                label="ApexQuant rot(W) (unit-row)")
         ax.hist(coords_h3, bins=bins, density=True, alpha=0.35, color="#d62728",
                 label="H3 U (unit-row)")
 
@@ -244,7 +244,7 @@ def fig_weight_histograms(seed: int = 0):
 def fig_ks_vs_layer(rows):
     """Per-layer KS statistic against Beta(d/2, d/2).
 
-    Baseline/SphereQuant use CNN3's nn.Sequential names (features.0/3/6, classifier);
+    Baseline/ApexQuant use CNN3's nn.Sequential names (features.0/3/6, classifier);
     H3 uses RotatedCNN3's names (conv1/2/3, fc). We canonicalize by depth
     index 1..4 so the three variants are comparable in the same chart.
     """
@@ -263,7 +263,7 @@ def fig_ks_vs_layer(rows):
 
     # Canonical depth labels (conv1, conv2, conv3, fc) with their d values.
     # Both CNN3 and RotatedCNN3 have 4 quantizable layers in the same order.
-    variants = ["baseline", "spherequant", "h3"]
+    variants = ["baseline", "apexquant", "h3"]
     n_layers = len(next(iter(picked.values()))[0])
     depth_labels = [f"L{i+1}" for i in range(n_layers)]
 

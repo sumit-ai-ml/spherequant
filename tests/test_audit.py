@@ -1,4 +1,4 @@
-"""Tests for spherequant.audit.
+"""Tests for apexquant.audit.
 
 Real torchvision models are loaded with weights=None (no download, no
 training); the audit is structural and does not need pretrained weights.
@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as tvm
 
-from spherequant import BAD, EMPTY, GOOD, MARGINAL, audit
+from apexquant import BAD, EMPTY, GOOD, MARGINAL, audit
 
 
 # --- Architecture-level verdicts: validated against the paper's results -----
@@ -102,21 +102,21 @@ def test_grouped_conv_fan_in():
 # --- Integration: quantize_model preflight behavior -------------------------
 
 def test_quantize_model_raises_on_bad_verdict():
-    from spherequant import SphereQuantPreflightWarning, quantize_model
+    from apexquant import ApexQuantPreflightWarning, quantize_model
     model = tvm.mobilenet_v2(weights=None)
     try:
         quantize_model(model, bits=4)
-    except SphereQuantPreflightWarning as e:
+    except ApexQuantPreflightWarning as e:
         assert e.report is not None
         assert e.report.overall_verdict == BAD
         # Message must mention the actual depthwise count.
         assert "depthwise" in str(e)
     else:
-        raise AssertionError("expected SphereQuantPreflightWarning")
+        raise AssertionError("expected ApexQuantPreflightWarning")
 
 
 def test_quantize_model_preflight_false_overrides():
-    from spherequant import quantize_model
+    from apexquant import quantize_model
     # MobileNet-V2 audit is BAD, but preflight=False should let it through.
     model = tvm.mobilenet_v2(weights=None)
     quant_model, stats = quantize_model(model, bits=4, preflight=False)

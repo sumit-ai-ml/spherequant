@@ -1,6 +1,6 @@
 """ViT sweep runner: extends run.py to also quantize nn.MultiheadAttention.in_proj_weight.
 
-Same baseline / SphereQuant / QuaRot variants and same codebooks as run.py, but applies
+Same baseline / ApexQuant / QuaRot variants and same codebooks as run.py, but applies
 mha_quant.quantize_mha_in_place() after the main quantization step. This catches
 the 33% of ViT weights that live in MultiheadAttention.in_proj_weight as raw
 Parameters outside any nn.Linear module.
@@ -20,8 +20,8 @@ import torch.nn as nn
 
 _THIS = Path(__file__).resolve().parent
 
-from spherequant.ptq import (  # noqa: E402
-    quantize_model_baseline, quantize_model_spherequant, quantize_model_quarot,
+from apexquant.ptq import (  # noqa: E402
+    quantize_model_baseline, quantize_model_apexquant, quantize_model_quarot,
 )
 
 from imagenet_loader import get_imagenet_val_loader
@@ -87,12 +87,12 @@ def sweep_vit(model_name: str, bits_list, codebooks, loader, device,
         s = model_size_with_mha(model, bits)
         # main + mha quantization for each (variant, codebook)
         for codebook in codebooks:
-            for variant_label in ["baseline", "spherequant"]:
+            for variant_label in ["baseline", "apexquant"]:
                 t0 = time.time()
                 if variant_label == "baseline":
                     model_q, stats = quantize_model_baseline(model, bits, codebook)
                 else:
-                    model_q, stats = quantize_model_spherequant(
+                    model_q, stats = quantize_model_apexquant(
                         model, bits, codebook, rotation_seed=rotation_seed)
                 quantize_mha_in_place(model_q, variant_label, bits,
                                        codebook=codebook, rotation_seed=rotation_seed)

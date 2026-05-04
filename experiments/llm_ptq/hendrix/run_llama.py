@@ -1,4 +1,4 @@
-"""SphereQuant post-training quantization for Llama 3 8B and 70B on Hendrix.
+"""ApexQuant post-training quantization for Llama 3 8B and 70B on Hendrix.
 
 Key differences from the laptop-scale run.py in the parent folder:
 
@@ -18,7 +18,7 @@ Key differences from the laptop-scale run.py in the parent folder:
    numpy quantization functions, and write the result back to the layer's
    native device. This avoids host-side tensors of tens of GB.
 
-Methods implemented: RTN-absmax, QuaRot-RTN, SphereQuant+Beta. All training-free.
+Methods implemented: RTN-absmax, QuaRot-RTN, ApexQuant+Beta. All training-free.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 # Reuse the core PTQ primitives from the CNN experiment folder.
 _THIS = Path(__file__).resolve().parent
 
-from spherequant.ptq import (  # noqa: E402
+from apexquant.ptq import (  # noqa: E402
     per_row_quantize,
     make_rotation,
     apply_rotation,
@@ -107,7 +107,7 @@ def quantize_model_inplace(model: nn.Module, method: str, bits: int,
             W_rec = _rtn_absmax(W, bits)
         elif method == "quarot":
             W_rec = _quarot(W, bits, rotation_seed, idx)
-        elif method == "spherequant":
+        elif method == "apexquant":
             W_rec = _h2(W, bits, rotation_seed, idx)
         else:
             raise ValueError(method)
@@ -275,7 +275,7 @@ def sweep(model_id: str, bits_list, methods, run_lm_eval: bool,
                 "model": model_id,
                 "variant": method,
                 "bits": bits,
-                "codebook": "beta" if method == "spherequant" else "symabs_uniform",
+                "codebook": "beta" if method == "apexquant" else "symabs_uniform",
                 "perplexity": ppl,
                 "size_mb": size_q,
                 "compression_ratio": model_size_mb_fp16(model) / size_q,
@@ -307,7 +307,7 @@ def main():
                    help="HF model id, e.g. meta-llama/Meta-Llama-3-8B")
     p.add_argument("--bits", type=int, nargs="+", default=[2, 4, 6, 8])
     p.add_argument("--methods", nargs="+",
-                   default=["rtn_absmax", "quarot", "spherequant"])
+                   default=["rtn_absmax", "quarot", "apexquant"])
     p.add_argument("--lm-eval", action="store_true",
                    help="also run lm-eval-harness zero-shot tasks")
     p.add_argument("--rotation-seed", type=int, default=0)

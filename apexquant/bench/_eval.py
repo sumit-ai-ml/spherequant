@@ -15,7 +15,7 @@ class BenchResult:
     model: str
     task: str            # "image_classification" or "causal_lm"
     dataset: str
-    variant: str         # "reference", "spherequant", "quarot", "rtn_absmax", "baseline"
+    variant: str         # "reference", "apexquant", "quarot", "rtn_absmax", "baseline"
     bits: int            # 32 / 16 for reference, else target bits
     codebook: str        # "fp32"/"fp16" for reference, else "beta"/"uniform"/"symabs_uniform"
     n_samples: int

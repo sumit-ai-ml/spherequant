@@ -7,12 +7,12 @@ across variants at a given bit budget (b bits per code + 1 FP32 norm per row):
    quantize the unit-sphere coordinates with the chosen codebook, store norms.
    Control for "what does codebook quantization look like WITHOUT rotation".
 
-2. SPHEREQUANT (rotate-then-quantize, ours): rotate each layer's flattened
+2. APEXQUANT (rotate-then-quantize, ours): rotate each layer's flattened
    weight on the fan-in axis (W_flat @ M), L2-normalize the rotated rows,
    quantize, then reconstruct via the inverse rotation.
 
 3. QUAROT-style baseline (Ashkboos et al., NeurIPS 2024): rotation + per-row
-   absmax-scaled symmetric uniform quantization. Same rotation as SphereQuant,
+   absmax-scaled symmetric uniform quantization. Same rotation as ApexQuant,
    but quantizes with a uniform integer grid instead of a Beta-matched codebook.
 
 4. RTN-ABSMAX: round-to-nearest with per-channel symmetric absmax scaling.
@@ -38,7 +38,7 @@ import torch
 import torch.nn as nn
 from scipy.stats import beta as beta_dist
 
-from spherequant.rotation_utils import (
+from apexquant.rotation_utils import (
     SRHTRotation,
     apply_rotation,
     beta_ks_test,
@@ -197,10 +197,10 @@ def quantize_model_baseline(model: nn.Module, bits: int, codebook: str) -> tuple
     return model_q, stats
 
 
-def quantize_model_spherequant(model: nn.Module, bits: int, codebook: str,
+def quantize_model_apexquant(model: nn.Module, bits: int, codebook: str,
                                rotation_seed: int = 0,
                                rotation_type: str = "srht") -> tuple[nn.Module, list[LayerStats]]:
-    """SphereQuant: rotate each layer's fan-in axis, then per-row-normalize and
+    """ApexQuant: rotate each layer's fan-in axis, then per-row-normalize and
     quantize the rotated coordinates with the (Beta or uniform) codebook.
     Reconstruct via the inverse rotation.
     """
@@ -258,10 +258,10 @@ def quantize_model_quarot(model: nn.Module, bits: int,
     """QuaRot-style baseline (Ashkboos et al., NeurIPS 2024) on CNN/MLP weights.
 
     Hadamard / SRHT rotation on the fan-in axis + per-channel symmetric uniform
-    quantization (absmax scale per output row). Same storage cost as SphereQuant:
+    quantization (absmax scale per output row). Same storage cost as ApexQuant:
     d * bits per code + 1 FP32 scale per row.
 
-    Difference from SphereQuant: SphereQuant uses per-row L2 normalize + a
+    Difference from ApexQuant: ApexQuant uses per-row L2 normalize + a
     Beta-matched codebook on [-1, 1]. QuaRot uses absmax-scaled symmetric
     integer quant on a uniform grid.
     """
@@ -324,31 +324,31 @@ def quantize_model_h3(rotated_model, bits: int, codebook: str) -> tuple[nn.Modul
 def quantize_model(
     model: nn.Module,
     bits: int,
-    method: str = "spherequant",
+    method: str = "apexquant",
     codebook: str = "beta",
     rotation_seed: int = 0,
     rotation_type: str = "srht",
     preflight: bool = True,
 ) -> tuple[nn.Module, list[LayerStats]]:
-    """Quantize ``model`` with the chosen ``method`` (default: SphereQuant).
+    """Quantize ``model`` with the chosen ``method`` (default: ApexQuant).
 
-    When ``method == "spherequant"`` and ``preflight=True`` (the default), the
-    fan-in audit (:mod:`spherequant.audit`) runs first:
+    When ``method == "apexquant"`` and ``preflight=True`` (the default), the
+    fan-in audit (:mod:`apexquant.audit`) runs first:
 
-      - ``BAD`` verdict raises :class:`SphereQuantPreflightWarning` with the
+      - ``BAD`` verdict raises :class:`ApexQuantPreflightWarning` with the
         report attached. The user must pass ``preflight=False`` to override.
       - ``MARGINAL`` verdict prints a single-line warning to stderr and
         proceeds. The user is expected to handle small-d layers separately.
       - ``GOOD`` and ``EMPTY`` verdicts proceed silently.
 
-    The audit only runs for ``method == "spherequant"``. The other methods
+    The audit only runs for ``method == "apexquant"``. The other methods
     (``quarot``, ``baseline``, ``rtn_absmax``) have no architectural-boundary
     failure mode, so the pre-flight is skipped.
     """
-    if method == "spherequant" and preflight:
+    if method == "apexquant" and preflight:
         # Lazy import to avoid a circular at package import time.
-        from spherequant.audit import BAD, MARGINAL, audit
-        from spherequant.exceptions import SphereQuantPreflightWarning
+        from apexquant.audit import BAD, MARGINAL, audit
+        from apexquant.exceptions import ApexQuantPreflightWarning
 
         report = audit(model, verbose=False)
         verdict = report.overall_verdict
@@ -358,21 +358,21 @@ def quantize_model(
             msg = (
                 f"Model has {pct:.1f}% of layers at d < 32 "
                 f"(including {n_dw} depthwise convolutions). "
-                f"SphereQuant will likely underperform QuaRot. "
+                f"ApexQuant will likely underperform QuaRot. "
                 f"Pass preflight=False to override, or use the QuaRot baseline."
             )
-            raise SphereQuantPreflightWarning(msg, report=report)
+            raise ApexQuantPreflightWarning(msg, report=report)
         if verdict == MARGINAL:
             import sys
             n_bad = report.n_layers_bad
             print(
-                f"SphereQuant audit: mixed-d model. {n_bad} layers at d < 32 "
+                f"ApexQuant audit: mixed-d model. {n_bad} layers at d < 32 "
                 f"will be skipped — apply QuaRot or RTN-absmax to those instead.",
                 file=sys.stderr,
             )
 
-    if method == "spherequant":
-        return quantize_model_spherequant(model, bits, codebook,
+    if method == "apexquant":
+        return quantize_model_apexquant(model, bits, codebook,
                                           rotation_seed=rotation_seed,
                                           rotation_type=rotation_type)
     if method == "quarot":
@@ -385,7 +385,7 @@ def quantize_model(
         return quantize_model_rtn_absmax(model, bits)
     raise ValueError(
         f"unknown method {method!r}; choose one of: "
-        "spherequant, quarot, baseline, rtn_absmax"
+        "apexquant, quarot, baseline, rtn_absmax"
     )
 
 

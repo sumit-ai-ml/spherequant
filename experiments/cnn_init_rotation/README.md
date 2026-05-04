@@ -14,7 +14,7 @@ the same trick work on the weights of a trained CNN?
 
 Two hypotheses, both on a 3-layer CNN trained on CIFAR-10.
 
-- **SphereQuant (post-training rotation):** train a standard CNN with Kaiming init,
+- **ApexQuant (post-training rotation):** train a standard CNN with Kaiming init,
   then rotate each layer's flattened weight matrix on the fan-in axis before
   quantizing. Compare quantized accuracy vs quantizing unrotated weights.
 
@@ -29,7 +29,7 @@ and is omitted.
 
 ## Sweep
 
-- Variants: `baseline`, `spherequant`, `h3_rotated_basis`
+- Variants: `baseline`, `apexquant`, `h3_rotated_basis`
 - Seeds: 0, 1, 2
 - Quantization bits: 2, 4, 6, 8
 - Codebooks: uniform grid, Beta(d/2, d/2) Lloyd-Max
@@ -50,7 +50,7 @@ test_sanity.py     round-trip, norm preservation, Beta-KS, H3 correctness
 ```
 
 Quantization primitives and rotation utilities live in the top-level
-`spherequant` package (`pip install -e .` from the repo root).
+`apexquant` package (`pip install -e .` from the repo root).
 
 ## How to run
 

@@ -1,5 +1,5 @@
 """Visualize per-row L2-normalized coordinate distributions before vs after
-SphereQuant's rotation, for representative layers spanning the fan-in
+ApexQuant's rotation, for representative layers spanning the fan-in
 range of each ImageNet model. Overlays Beta(d/2, d/2) for reference.
 
 Output: figures/fig_rotation_distributions.png  (6 models x 3 layers)
@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from scipy.stats import beta as beta_dist
 
-from spherequant.rotation_utils import apply_rotation, make_rotation
+from apexquant.rotation_utils import apply_rotation, make_rotation
 from models import load_pretrained
 
 
@@ -119,7 +119,7 @@ def main():
                 ax.legend(loc="upper right", fontsize=7, framealpha=0.85)
 
     fig.suptitle(
-        "Per-row L2-normalized weight coordinates: pre vs post SphereQuant rotation\n"
+        "Per-row L2-normalized weight coordinates: pre vs post ApexQuant rotation\n"
         "(red overlay: Beta(d/2, d/2) — the predicted post-rotation density)",
         fontsize=10, y=0.997,
     )

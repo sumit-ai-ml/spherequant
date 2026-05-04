@@ -4,7 +4,7 @@ Post-training quantization sweep on pretrained ImageNet models.
 
 ## Scope
 
-This experiment tests **SphereQuant (post-hoc rotation)** only — take a torchvision
+This experiment tests **ApexQuant (post-hoc rotation)** only — take a torchvision
 pretrained model, rotate each layer's flattened weights on the fan-in axis,
 then quantize. No retraining. Reuses the quantization primitives from
 `../cnn_init_rotation/ptq.py`.
@@ -38,7 +38,7 @@ pretrained expectations.
 ## Sweep
 
 - Models: resnet18, resnet50, mobilenet_v2
-- Quantization: SphereQuant (rotate then quantize) vs baseline (quantize directly)
+- Quantization: ApexQuant (rotate then quantize) vs baseline (quantize directly)
 - Bits: {2, 4, 6, 8}
 - Codebooks: {uniform, beta}
 - = 3 models x (1 FP32 baseline + 2 variants x 4 bits x 2 codebooks) = 51 evaluations

@@ -6,7 +6,7 @@ Two entry points:
     ``nn.Module`` plus a tokenizer and a text corpus. Use this when your
     model is a state-dict you've already loaded, or anything that isn't a
     ``AutoModelForCausalLM`` from the Hub.
-  - :func:`run` — CLI helper called by ``python -m spherequant.bench``.
+  - :func:`run` — CLI helper called by ``python -m apexquant.bench``.
     Loads an HF model + HF text dataset, then dispatches to
     ``benchmark_causal_lm``.
 
@@ -29,10 +29,10 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
-from spherequant.audit import audit
-from spherequant.bench._eval import BenchResult
-from spherequant.exceptions import SphereQuantPreflightWarning
-from spherequant.ptq import quantize_model
+from apexquant.audit import audit
+from apexquant.bench._eval import BenchResult
+from apexquant.exceptions import ApexQuantPreflightWarning
+from apexquant.ptq import quantize_model
 
 DEFAULT_DATASET = "wikitext"
 DEFAULT_DATASET_CONFIG = "wikitext-2-raw-v1"
@@ -85,7 +85,7 @@ def benchmark_causal_lm(
     model_name: str = "<local>",
     dataset_name: str = "<local>",
     bits_list: list[int] = (4, 8),
-    methods: list[str] = ("spherequant", "quarot", "rtn_absmax"),
+    methods: list[str] = ("apexquant", "quarot", "rtn_absmax"),
     codebook: str = "beta",
     rotation_seed: int = 0,
     seq_len: int = 2048,
@@ -136,7 +136,7 @@ def benchmark_causal_lm(
 
     for bits in bits_list:
         for method in methods:
-            cb = codebook if method in ("spherequant", "baseline") else "symabs_uniform"
+            cb = codebook if method in ("apexquant", "baseline") else "symabs_uniform"
             t0 = time.time()
             model_q = copy.deepcopy(model)
             try:
@@ -145,7 +145,7 @@ def benchmark_causal_lm(
                     codebook=cb, rotation_seed=rotation_seed,
                     preflight=preflight,
                 )
-            except SphereQuantPreflightWarning as e:
+            except ApexQuantPreflightWarning as e:
                 if verbose:
                     print(f"  {method:11s} bits={bits}  REFUSED by preflight: {e}")
                 del model_q
@@ -231,7 +231,7 @@ def run(
             raise SystemExit(
                 "--checkpoint must contain a full nn.Module (torch.save(model, ...)), "
                 "not a state_dict. For state-dicts, reconstruct the model in code "
-                "and call spherequant.bench.benchmark_causal_lm directly."
+                "and call apexquant.bench.benchmark_causal_lm directly."
             )
         model = obj
         print(f"Loading tokenizer {tokenizer_id}...")

@@ -11,8 +11,8 @@ Two task paths, dispatched on model architecture:
 
 CLI::
 
-    python -m spherequant.bench --hf-model <id> [--bits 2 4 6 8]
-                                [--methods spherequant quarot rtn_absmax]
+    python -m apexquant.bench --hf-model <id> [--bits 2 4 6 8]
+                                [--methods apexquant quarot rtn_absmax]
                                 [--hf-dataset <id>] [--subset-size N]
                                 [--out results.jsonl]
 
@@ -20,9 +20,9 @@ The pipeline is: load -> audit (verdict printed) -> eval reference ->
 for each (method, bits): deepcopy -> quantize -> eval -> log.
 """
 
-from spherequant.bench._eval import BenchResult, format_summary, write_jsonl
-from spherequant.bench.llm import benchmark_causal_lm
-from spherequant.bench.vision import benchmark_image_classifier
+from apexquant.bench._eval import BenchResult, format_summary, write_jsonl
+from apexquant.bench.llm import benchmark_causal_lm
+from apexquant.bench.vision import benchmark_image_classifier
 
 __all__ = [
     "BenchResult",

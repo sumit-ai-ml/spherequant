@@ -1,4 +1,4 @@
-"""Smoke tests for spherequant.bench.
+"""Smoke tests for apexquant.bench.
 
 Two layers:
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 import pytest
 
-from spherequant.bench import BenchResult, format_summary, write_jsonl
+from apexquant.bench import BenchResult, format_summary, write_jsonl
 
 
 # ---------- Layer 1: unit tests ---------------------------------------------
@@ -33,11 +33,11 @@ def test_format_summary_image_classification_includes_drop_column():
                     variant="reference", bits=32, codebook="fp32",
                     n_samples=8, top1=0.50, top5=1.00, elapsed_s=1.0),
         BenchResult(model="m", task="image_classification", dataset="d",
-                    variant="spherequant", bits=4, codebook="beta",
+                    variant="apexquant", bits=4, codebook="beta",
                     n_samples=8, top1=0.25, top5=0.75, elapsed_s=2.0),
     ]
     out = format_summary(rows)
-    assert "spherequant" in out
+    assert "apexquant" in out
     assert "Δtop1" in out
     # 0.25 - 0.50 = -25.00pp
     assert "-25.00" in out
@@ -49,7 +49,7 @@ def test_format_summary_causal_lm_uses_perplexity_column():
                     variant="reference", bits=16, codebook="fp16",
                     n_samples=2, perplexity=10.0, elapsed_s=1.0),
         BenchResult(model="m", task="causal_lm", dataset="d",
-                    variant="spherequant", bits=4, codebook="beta",
+                    variant="apexquant", bits=4, codebook="beta",
                     n_samples=2, perplexity=12.5, elapsed_s=2.0),
     ]
     out = format_summary(rows)
@@ -84,7 +84,7 @@ def test_llm_path_end_to_end(_hf_available, monkeypatch):
     import datasets as _datasets
     from datasets import Dataset
 
-    from spherequant.bench import llm
+    from apexquant.bench import llm
 
     fake_ds = Dataset.from_dict({"text": ["hello world " * 50] * 8})
     monkeypatch.setattr(_datasets, "load_dataset",
@@ -100,7 +100,7 @@ def test_llm_path_end_to_end(_hf_available, monkeypatch):
         dataset_split="test",
         text_col="text",
         bits_list=[4],
-        methods=["spherequant"],
+        methods=["apexquant"],
         codebook="beta",
         rotation_seed=0,
         seq_len=32,
@@ -111,7 +111,7 @@ def test_llm_path_end_to_end(_hf_available, monkeypatch):
     )
 
     assert len(results) == 2
-    assert [r.variant for r in results] == ["reference", "spherequant"]
+    assert [r.variant for r in results] == ["reference", "apexquant"]
     for r in results:
         assert r.perplexity is not None and r.perplexity > 0
         assert r.task == "causal_lm"
@@ -125,7 +125,7 @@ def test_vision_path_end_to_end(_hf_available, monkeypatch):
     from PIL import Image
     from transformers import AutoConfig
 
-    from spherequant.bench import vision
+    from apexquant.bench import vision
 
     model_id = "hf-internal-testing/tiny-random-ViTForImageClassification"
     n_classes = AutoConfig.from_pretrained(model_id).num_labels
@@ -150,7 +150,7 @@ def test_vision_path_end_to_end(_hf_available, monkeypatch):
         image_col="image",
         label_col="label",
         bits_list=[4],
-        methods=["spherequant"],
+        methods=["apexquant"],
         codebook="beta",
         rotation_seed=0,
         subset_size=None,
@@ -161,7 +161,7 @@ def test_vision_path_end_to_end(_hf_available, monkeypatch):
     )
 
     assert len(results) == 2
-    assert [r.variant for r in results] == ["reference", "spherequant"]
+    assert [r.variant for r in results] == ["reference", "apexquant"]
     for r in results:
         assert r.top1 is not None
         assert 0.0 <= r.top1 <= 1.0
@@ -197,7 +197,7 @@ def test_benchmark_image_classifier_local_torchvision_style():
     import torch
     from torch.utils.data import DataLoader, TensorDataset
 
-    from spherequant.bench import benchmark_image_classifier
+    from apexquant.bench import benchmark_image_classifier
 
     torch.manual_seed(0)
     model = _make_tiny_torchvision_classifier()
@@ -210,13 +210,13 @@ def test_benchmark_image_classifier_local_torchvision_style():
         model, loader,
         model_name="tiny_mlp", dataset_name="synthetic",
         bits_list=[4],
-        methods=["spherequant"],
+        methods=["apexquant"],
         device="cpu",
         preflight=False,  # tiny d on the head; we're testing wiring
         verbose=False,
     )
     assert len(results) == 2
-    assert [r.variant for r in results] == ["reference", "spherequant"]
+    assert [r.variant for r in results] == ["reference", "apexquant"]
     for r in results:
         assert r.top1 is not None
         assert r.model == "tiny_mlp"
@@ -229,7 +229,7 @@ def test_benchmark_image_classifier_infers_n_classes_from_logits():
     import torch
     from torch.utils.data import DataLoader, TensorDataset
 
-    from spherequant.bench import benchmark_image_classifier
+    from apexquant.bench import benchmark_image_classifier
 
     model = _make_tiny_torchvision_classifier()  # 4 classes, no .config
     loader = DataLoader(
@@ -237,7 +237,7 @@ def test_benchmark_image_classifier_infers_n_classes_from_logits():
         batch_size=4,
     )
     results = benchmark_image_classifier(
-        model, loader, methods=["spherequant"], bits_list=[4],
+        model, loader, methods=["apexquant"], bits_list=[4],
         device="cpu", preflight=False, verbose=False,
     )
     # All labels are 0 (in-range for 4-class model), nothing skipped.
@@ -252,7 +252,7 @@ def test_cli_checkpoint_round_trip(_hf_available, tmp_path: Path, monkeypatch):
     import numpy as np
     from PIL import Image
 
-    from spherequant.bench import vision
+    from apexquant.bench import vision
 
     n_classes = 4
     model = _make_tiny_torchvision_classifier()
@@ -282,7 +282,7 @@ def test_cli_checkpoint_round_trip(_hf_available, tmp_path: Path, monkeypatch):
         image_col="image",
         label_col="label",
         bits_list=[4],
-        methods=["spherequant"],
+        methods=["apexquant"],
         codebook="beta",
         rotation_seed=0,
         subset_size=None,
@@ -292,7 +292,7 @@ def test_cli_checkpoint_round_trip(_hf_available, tmp_path: Path, monkeypatch):
         preflight=False,
     )
     assert len(results) == 2
-    assert [r.variant for r in results] == ["reference", "spherequant"]
+    assert [r.variant for r in results] == ["reference", "apexquant"]
     assert results[0].model == str(ckpt_path)
 
 
@@ -300,7 +300,7 @@ def test_cli_checkpoint_rejects_state_dict(tmp_path: Path):
     """If the user saved a state_dict instead of a full module, refuse with a
     clear pointer to the Python API."""
     import torch
-    from spherequant.bench import vision
+    from apexquant.bench import vision
 
     sd_path = tmp_path / "sd.pt"
     torch.save({"weight": torch.zeros(2, 2)}, sd_path)
@@ -315,7 +315,7 @@ def test_cli_checkpoint_rejects_state_dict(tmp_path: Path):
             dataset_split=None,
             data_dir=None,
             image_col=None, label_col=None,
-            bits_list=[4], methods=["spherequant"], codebook="beta",
+            bits_list=[4], methods=["apexquant"], codebook="beta",
             rotation_seed=0, subset_size=None, batch_size=4, num_workers=0,
             device="cpu", preflight=False,
         )

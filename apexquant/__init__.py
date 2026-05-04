@@ -1,8 +1,8 @@
-"""SphereQuant: training-free post-training weight quantization via random
+"""ApexQuant: training-free post-training weight quantization via random
 orthogonal rotation + Beta-matched scalar codebook.
 """
 
-from spherequant.audit import (
+from apexquant.audit import (
     BAD,
     EMPTY,
     GOOD,
@@ -11,8 +11,8 @@ from spherequant.audit import (
     ModelReport,
     audit,
 )
-from spherequant.exceptions import SphereQuantPreflightWarning
-from spherequant.ptq import (
+from apexquant.exceptions import ApexQuantPreflightWarning
+from apexquant.ptq import (
     LayerStats,
     beta_codebook,
     quantize_model,
@@ -20,10 +20,10 @@ from spherequant.ptq import (
     quantize_model_h3,
     quantize_model_quarot,
     quantize_model_rtn_absmax,
-    quantize_model_spherequant,
+    quantize_model_apexquant,
     uniform_codebook,
 )
-from spherequant.rotation_utils import (
+from apexquant.rotation_utils import (
     SRHTRotation,
     apply_rotation,
     beta_ks_test,
@@ -44,7 +44,7 @@ __all__ = [
     "MARGINAL",
     "ModelReport",
     "SRHTRotation",
-    "SphereQuantPreflightWarning",
+    "ApexQuantPreflightWarning",
     "apply_rotation",
     "audit",
     "beta_codebook",
@@ -57,7 +57,7 @@ __all__ = [
     "quantize_model_h3",
     "quantize_model_quarot",
     "quantize_model_rtn_absmax",
-    "quantize_model_spherequant",
+    "quantize_model_apexquant",
     "random_orthogonal",
     "torch_apply_rotation",
     "torch_inverse_rotation",

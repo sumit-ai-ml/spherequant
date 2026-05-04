@@ -1,26 +1,26 @@
-"""SphereQuant fan-in audit.
+"""ApexQuant fan-in audit.
 
-Walks a PyTorch model and decides, layer by layer, whether SphereQuant's
+Walks a PyTorch model and decides, layer by layer, whether ApexQuant's
 Beta-matched codebook is a good fit. The decision is driven entirely by the
 fan-in d of each quantizable parameter, because d controls how sharply the
 post-rotation Beta(d/2, d/2) density concentrates and therefore how much edge
 the matched codebook has over a uniform grid (QuaRot).
 
 The thresholds come from the empirical figure in the paper:
-    d >= 100           -> SphereQuant wins decisively at low bit-widths
-    32  <= d < 100     -> SphereQuant still helps, margins shrink
+    d >= 100           -> ApexQuant wins decisively at low bit-widths
+    32  <= d < 100     -> ApexQuant still helps, margins shrink
     d < 32             -> Beta is too flat, codebook mismatched, prefer QuaRot
 
 Usage::
 
-    from spherequant import audit
+    from apexquant import audit
     audit(model)                          # prints a report
     report = audit(model, verbose=False)  # returns a ModelReport you can act on
 
 Or from the CLI::
 
-    python -m spherequant.audit --model resnet50
-    python -m spherequant.audit --checkpoint path/to/model.pt
+    python -m apexquant.audit --model resnet50
+    python -m apexquant.audit --checkpoint path/to/model.pt
 
 Note: this module inspects ``module.in_features``, ``module.kernel_size``,
 ``module.groups`` and similar structural attributes — it never reads weight
@@ -55,8 +55,8 @@ LARGE_D = 100
 
 
 # Verdict labels for individual layers and for the whole model.
-GOOD = "good"           # d >= LARGE_D  -> SphereQuant strongly preferred
-MARGINAL = "marginal"   # SMALL_D <= d < LARGE_D  -> SphereQuant still helps
+GOOD = "good"           # d >= LARGE_D  -> ApexQuant strongly preferred
+MARGINAL = "marginal"   # SMALL_D <= d < LARGE_D  -> ApexQuant still helps
 BAD = "bad"             # d < SMALL_D  -> use QuaRot for this layer
 SKIP = "skip"           # not a quantizable parameter at all
 EMPTY = "empty"         # model has no quantizable layers (e.g. only LayerNorm)
@@ -273,7 +273,7 @@ def _print_report(report: ModelReport) -> None:
         print()
         print("VERDICT: Nothing to quantize.")
         print("  No nn.Linear, nn.Conv2d, or nn.MultiheadAttention layers were")
-        print("  found in this model. Nothing for SphereQuant or QuaRot to act on.")
+        print("  found in this model. Nothing for ApexQuant or QuaRot to act on.")
         print()
         return
 
@@ -315,7 +315,7 @@ def _print_report(report: ModelReport) -> None:
 
     verdict = report.overall_verdict
     if verdict == GOOD:
-        print(f"VERDICT: SphereQuant recommended.")
+        print(f"VERDICT: ApexQuant recommended.")
         print(f"  At least 70% of weight mass sits in d >= {LARGE_D} layers, where the")
         print(f"  Beta(d/2, d/2) approximation is sharp and the matched codebook")
         print(f"  outperforms QuaRot decisively at 2-4 bits.")
@@ -323,15 +323,15 @@ def _print_report(report: ModelReport) -> None:
         print(f"VERDICT: Use QuaRot instead.")
         print(f"  Either >30% of weight mass or >20% of layers sit at d < {SMALL_D}")
         print(f"  (typically depthwise convolutions). The Beta density at small d")
-        print(f"  is nearly flat, so SphereQuant's matched codebook offers no edge")
+        print(f"  is nearly flat, so ApexQuant's matched codebook offers no edge")
         print(f"  and may underperform QuaRot's uniform grid (see MobileNet-V2 in")
         print(f"  the paper). Even small-param-count layers matter here because")
         print(f"  every forward pass routes through them.")
     else:
-        print(f"VERDICT: Mixed. SphereQuant for large-d layers, QuaRot for small-d.")
-        print(f"  Consider a per-layer policy: apply SphereQuant where d >= {LARGE_D}")
+        print(f"VERDICT: Mixed. ApexQuant for large-d layers, QuaRot for small-d.")
+        print(f"  Consider a per-layer policy: apply ApexQuant where d >= {LARGE_D}")
         print(f"  and QuaRot where d < {SMALL_D}. Layers in [{SMALL_D}, {LARGE_D}) can go")
-        print(f"  either way; pick based on bit budget (SphereQuant matters more")
+        print(f"  either way; pick based on bit budget (ApexQuant matters more")
         print(f"  at lower bit-widths).")
     print()
 

@@ -27,7 +27,7 @@ def load_rows():
 
 def fig_top1_vs_bits(rows):
     """One subplot per model. X = bits. Y = top-1. Lines: baseline uniform,
-    baseline beta, SphereQuant uniform, SphereQuant beta. Dotted = FP32 reference."""
+    baseline beta, ApexQuant uniform, ApexQuant beta. Dotted = FP32 reference."""
     rows_ptq = [r for r in rows if r["variant"] != "fp32"]
     fp32_by_model = {r["model"]: r["top1"] for r in rows if r["variant"] == "fp32"}
     models = sorted(fp32_by_model.keys())
@@ -40,8 +40,8 @@ def fig_top1_vs_bits(rows):
     styles = {
         ("baseline", "uniform"): {"color": "#888888", "marker": "o", "linestyle": "-"},
         ("baseline", "beta"): {"color": "#888888", "marker": "o", "linestyle": "--"},
-        ("spherequant", "uniform"): {"color": "#1f77b4", "marker": "s", "linestyle": "-"},
-        ("spherequant", "beta"): {"color": "#1f77b4", "marker": "s", "linestyle": "--"},
+        ("apexquant", "uniform"): {"color": "#1f77b4", "marker": "s", "linestyle": "-"},
+        ("apexquant", "beta"): {"color": "#1f77b4", "marker": "s", "linestyle": "--"},
     }
 
     for ax, model in zip(axes, models):
@@ -70,7 +70,7 @@ def fig_top1_vs_bits(rows):
 
 
 def fig_rotation_gain(rows):
-    """How much does SphereQuant improve over baseline? per (model, codebook, bits)."""
+    """How much does ApexQuant improve over baseline? per (model, codebook, bits)."""
     rows_ptq = [r for r in rows if r["variant"] != "fp32"]
     # (model, bits, codebook, variant) -> top1
     tbl = {(r["model"], r["bits"], r["codebook"], r["variant"]): r["top1"]
@@ -88,7 +88,7 @@ def fig_rotation_gain(rows):
             bits_kept = []
             for b in bits_list:
                 base = tbl.get((model, b, codebook, "baseline"))
-                sq = tbl.get((model, b, codebook, "spherequant"))
+                sq = tbl.get((model, b, codebook, "apexquant"))
                 if base is None or sq is None:
                     continue
                 gains.append(100 * (sq - base))
@@ -102,7 +102,7 @@ def fig_rotation_gain(rows):
         ax.grid(alpha=0.3)
         ax.legend()
     axes[0].set_ylabel("top-1 gain from rotation (pp)")
-    fig.suptitle("Accuracy gain from TurboQuant-style rotation (SphereQuant - baseline)")
+    fig.suptitle("Accuracy gain from TurboQuant-style rotation (ApexQuant - baseline)")
     fig.tight_layout()
     out = FIG_DIR / "fig_imagenet_rotation_gain.png"
     fig.savefig(out, dpi=140, bbox_inches="tight")
@@ -128,7 +128,7 @@ def print_summary(rows):
               f"{sf:>8.1f} {'1.0x':>6s} "
               f"{t1f*100:>7.2f} {t5f*100:>7.2f} "
               f"{'-':>7s} {'-':>7s}")
-        for variant in ["baseline", "spherequant"]:
+        for variant in ["baseline", "apexquant"]:
             for codebook in ["uniform", "beta"]:
                 for bits in [8, 6, 4, 2]:
                     r = next((r for r in rows_ptq

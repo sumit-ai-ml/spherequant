@@ -2,7 +2,7 @@
 
 Picks one attention projection (q_proj), one MLP gate projection, and one
 MLP down projection per LLM (3 layers covering the fan-in spectrum) and
-plots pre vs post SphereQuant rotation distributions with Beta(d/2, d/2).
+plots pre vs post ApexQuant rotation distributions with Beta(d/2, d/2).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 from scipy.stats import beta as beta_dist
 
-from spherequant.rotation_utils import apply_rotation, make_rotation
+from apexquant.rotation_utils import apply_rotation, make_rotation
 from models import load_model
 
 
@@ -107,7 +107,7 @@ def main():
             torch.cuda.empty_cache()
 
     fig.suptitle(
-        "LLM weight coordinates: pre vs post SphereQuant rotation\n"
+        "LLM weight coordinates: pre vs post ApexQuant rotation\n"
         "(red overlay: Beta(d/2, d/2) — the predicted post-rotation density)",
         fontsize=10, y=0.997,
     )

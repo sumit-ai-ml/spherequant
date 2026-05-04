@@ -7,7 +7,7 @@ Two entry points:
     your model is a torchvision-style classifier, a state-dict you've
     already loaded, or anything that isn't a HuggingFace
     ``AutoModelForImageClassification``.
-  - :func:`run` — CLI helper called by ``python -m spherequant.bench``.
+  - :func:`run` — CLI helper called by ``python -m apexquant.bench``.
     Loads an HF model + HF dataset, builds the loader, then dispatches to
     ``benchmark_image_classifier``.
 
@@ -26,10 +26,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-from spherequant.audit import audit
-from spherequant.bench._eval import BenchResult
-from spherequant.exceptions import SphereQuantPreflightWarning
-from spherequant.ptq import quantize_model
+from apexquant.audit import audit
+from apexquant.bench._eval import BenchResult
+from apexquant.exceptions import ApexQuantPreflightWarning
+from apexquant.ptq import quantize_model
 
 DEFAULT_DATASET = "benjamin-paine/imagenet-1k-256x256"
 DEFAULT_SPLIT = "validation"
@@ -188,7 +188,7 @@ def benchmark_image_classifier(
     dataset_name: str = "<local>",
     n_classes: Optional[int] = None,
     bits_list: list[int] = (4, 8),
-    methods: list[str] = ("spherequant", "quarot", "rtn_absmax"),
+    methods: list[str] = ("apexquant", "quarot", "rtn_absmax"),
     codebook: str = "beta",
     rotation_seed: int = 0,
     device: Optional[str] = None,
@@ -233,7 +233,7 @@ def benchmark_image_classifier(
 
     for bits in bits_list:
         for method in methods:
-            cb = codebook if method in ("spherequant", "baseline") else "symabs_uniform"
+            cb = codebook if method in ("apexquant", "baseline") else "symabs_uniform"
             t0 = time.time()
             model_q = copy.deepcopy(model)
             try:
@@ -242,7 +242,7 @@ def benchmark_image_classifier(
                     codebook=cb, rotation_seed=rotation_seed,
                     preflight=preflight,
                 )
-            except SphereQuantPreflightWarning as e:
+            except ApexQuantPreflightWarning as e:
                 if verbose:
                     print(f"  {method:11s} bits={bits}  REFUSED by preflight: {e}")
                 del model_q
@@ -324,7 +324,7 @@ def run(
             raise SystemExit(
                 "--checkpoint must contain a full nn.Module (torch.save(model, ...)), "
                 "not a state_dict. For state-dicts, reconstruct the model in code "
-                "and call spherequant.bench.benchmark_image_classifier directly."
+                "and call apexquant.bench.benchmark_image_classifier directly."
             )
         model = obj
         processor = None

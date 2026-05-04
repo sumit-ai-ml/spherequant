@@ -75,18 +75,18 @@ def print_master_tables(rows):
               f"{f['size_mb']:.1f} MB")
         print("=" * 90)
         header = (f"{'bits':>4} | {'cb':>7} | {'size MB':>8} | {'ratio':>6} | "
-                 f"{'baseline':>9} | {'QuaRot':>9} | {'SphereQuant (ours)':>10}")
+                 f"{'baseline':>9} | {'QuaRot':>9} | {'ApexQuant (ours)':>10}")
         print(header)
         print("-" * len(header))
         for bits in [2, 4, 6, 8]:
             for cb in ["uniform", "beta"]:
                 base = _best(rows, model, bits, [("baseline", cb)])
-                sq = _best(rows, model, bits, [("spherequant", cb)])
+                sq = _best(rows, model, bits, [("apexquant", cb)])
                 size, ratio = None, None
                 for r in rows:
                     if (r["model"] == model and r["bits"] == bits
                             and r.get("rotation_seed", 0) == 0
-                            and r["variant"] in ("baseline", "spherequant")
+                            and r["variant"] in ("baseline", "apexquant")
                             and r["codebook"] == cb):
                         size = r["size_mb"]
                         ratio = r["compression_ratio"]
@@ -109,7 +109,7 @@ def print_master_tables(rows):
 
 
 def fig_top1_vs_bits_all(rows):
-    """6 subplots, one per model. Lines: baseline_beta, quarot, spherequant_beta."""
+    """6 subplots, one per model. Lines: baseline_beta, quarot, apexquant_beta."""
     fp32 = {r["model"]: r["top1"] for r in rows if r["variant"] == "fp32"}
     n = len(MODEL_ORDER)
     fig, axes = plt.subplots(2, 3, figsize=(15, 9), sharey=False)
@@ -120,21 +120,21 @@ def fig_top1_vs_bits_all(rows):
                           "label": "Baseline + Beta"},
         "quarot": {"color": "#1f77b4", "marker": "s", "linestyle": "-",
                    "label": "QuaRot"},
-        "spherequant_beta": {"color": "#d62728", "marker": "^", "linestyle": "-",
-                    "label": "SphereQuant + Beta (ours)", "linewidth": 2},
+        "apexquant_beta": {"color": "#d62728", "marker": "^", "linestyle": "-",
+                    "label": "ApexQuant + Beta (ours)", "linewidth": 2},
     }
 
     for ax, model in zip(axes, MODEL_ORDER):
         if model not in fp32:
             continue
-        pts = {"baseline_beta": [], "quarot": [], "spherequant_beta": []}
+        pts = {"baseline_beta": [], "quarot": [], "apexquant_beta": []}
         for bits in [2, 4, 6, 8]:
             b = _best(rows, model, bits, [("baseline", "beta")])
             q = _best(rows, model, bits, [("quarot", "symabs_uniform")])
-            h = _best(rows, model, bits, [("spherequant", "beta")])
+            h = _best(rows, model, bits, [("apexquant", "beta")])
             if b is not None: pts["baseline_beta"].append((bits, b * 100))
             if q is not None: pts["quarot"].append((bits, q * 100))
-            if h is not None: pts["spherequant_beta"].append((bits, h * 100))
+            if h is not None: pts["apexquant_beta"].append((bits, h * 100))
         for key, style in styles.items():
             ps = pts[key]
             if not ps: continue
@@ -156,14 +156,14 @@ def fig_top1_vs_bits_all(rows):
 
 
 def fig_rotation_gain_all(rows):
-    """Rotation gain (SphereQuant - Baseline, Beta codebook) vs bits, per model."""
+    """Rotation gain (ApexQuant - Baseline, Beta codebook) vs bits, per model."""
     fig, ax = plt.subplots(figsize=(9, 5))
     colors = plt.cm.tab10(np.linspace(0, 1, len(MODEL_ORDER)))
     for color, model in zip(colors, MODEL_ORDER):
         pts = []
         for bits in [2, 4, 6, 8]:
             b = _best(rows, model, bits, [("baseline", "beta")])
-            h = _best(rows, model, bits, [("spherequant", "beta")])
+            h = _best(rows, model, bits, [("apexquant", "beta")])
             if b is None or h is None: continue
             pts.append((bits, (h - b) * 100))
         if not pts: continue
@@ -173,7 +173,7 @@ def fig_rotation_gain_all(rows):
     ax.axhline(0, color="k", linewidth=0.5, alpha=0.5)
     ax.set_xlabel("bits per weight")
     ax.set_ylabel("rotation gain over baseline (Beta codebook, pp)")
-    ax.set_title("Rotation gain: SphereQuant+Beta − Baseline+Beta")
+    ax.set_title("Rotation gain: ApexQuant+Beta − Baseline+Beta")
     ax.legend(loc="upper right", fontsize=9)
     ax.grid(alpha=0.3)
     fig.tight_layout()
@@ -183,14 +183,14 @@ def fig_rotation_gain_all(rows):
 
 
 def fig_ours_vs_quarot(rows):
-    """Our advantage (SphereQuant+Beta − QuaRot) vs bits, per model."""
+    """Our advantage (ApexQuant+Beta − QuaRot) vs bits, per model."""
     fig, ax = plt.subplots(figsize=(9, 5))
     colors = plt.cm.tab10(np.linspace(0, 1, len(MODEL_ORDER)))
     for color, model in zip(colors, MODEL_ORDER):
         pts = []
         for bits in [2, 4, 6, 8]:
             q = _best(rows, model, bits, [("quarot", "symabs_uniform")])
-            h = _best(rows, model, bits, [("spherequant", "beta")])
+            h = _best(rows, model, bits, [("apexquant", "beta")])
             if q is None or h is None: continue
             pts.append((bits, (h - q) * 100))
         if not pts: continue
@@ -200,7 +200,7 @@ def fig_ours_vs_quarot(rows):
     ax.axhline(0, color="k", linewidth=0.5, alpha=0.5)
     ax.set_xlabel("bits per weight")
     ax.set_ylabel("ours over QuaRot (pp)")
-    ax.set_title("Method-to-method gap: (SphereQuant + Beta) − QuaRot")
+    ax.set_title("Method-to-method gap: (ApexQuant + Beta) − QuaRot")
     ax.legend(loc="best", fontsize=9)
     ax.grid(alpha=0.3)
     fig.tight_layout()

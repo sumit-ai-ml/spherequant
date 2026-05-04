@@ -3,8 +3,8 @@
 For each model:
   1. Load torchvision pretrained weights.
   2. Evaluate FP32 top-1 / top-5 on ImageNet val.
-  3. For each (bits, codebook, variant in {baseline, spherequant}):
-       - Quantize (baseline = direct; spherequant = rotate then quantize).
+  3. For each (bits, codebook, variant in {baseline, apexquant}):
+       - Quantize (baseline = direct; apexquant = rotate then quantize).
        - Evaluate top-1 / top-5 on ImageNet val.
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from spherequant.ptq import quantize_model_baseline, quantize_model_spherequant, quantize_model_quarot
+from apexquant.ptq import quantize_model_baseline, quantize_model_apexquant, quantize_model_quarot
 
 from imagenet_loader import get_imagenet_val_loader
 from models import load_pretrained, model_size_at_bits
@@ -114,12 +114,12 @@ def sweep_model(model_name: str, bits_list, codebooks, loader, device,
     for bits in bits_list:
         s = model_size_at_bits(model, bits)
         for codebook in codebooks:
-            for variant in ["baseline", "spherequant"]:
+            for variant in ["baseline", "apexquant"]:
                 t0 = time.time()
                 if variant == "baseline":
                     model_q, stats = quantize_model_baseline(model, bits, codebook)
                 else:
-                    model_q, stats = quantize_model_spherequant(
+                    model_q, stats = quantize_model_apexquant(
                         model, bits, codebook, rotation_seed=rotation_seed
                     )
                 model_q = model_q.to(device)

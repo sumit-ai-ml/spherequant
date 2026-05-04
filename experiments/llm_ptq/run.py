@@ -6,7 +6,7 @@ For each model × bit width × method, quantize the weights in place
 Methods:
   - "rtn"    : baseline round-to-nearest per-channel absmax (no rotation)
   - "quarot" : rotation + RTN absmax (our QuaRot-style baseline)
-  - "spherequant_beta": rotation + per-row L2 normalize + Beta codebook (ours)
+  - "apexquant_beta": rotation + per-row L2 normalize + Beta codebook (ours)
 
 Perplexity is the standard WikiText-2 metric used by GPTQ, AWQ, QuaRot.
 Lower is better. FP16 reference is the target.
@@ -27,10 +27,10 @@ import torch.nn as nn
 _THIS = Path(__file__).resolve().parent
 
 # Reuse the core primitives
-from spherequant.ptq import (  # noqa: E402
+from apexquant.ptq import (  # noqa: E402
     quantize_model_baseline,   # per-row L2 + codebook (CNN-style)
     quantize_model_rtn_absmax, # per-channel absmax uniform, no rotation (LLM RTN)
-    quantize_model_spherequant,
+    quantize_model_apexquant,
     quantize_model_quarot,
 )
 
@@ -68,8 +68,8 @@ def run_one(model, tokenizer, model_id: str, variant: str, bits: int,
     elif variant == "quarot":
         model_q, stats = quantize_model_quarot(model_q, bits,
                                                rotation_seed=rotation_seed)
-    elif variant == "spherequant":
-        model_q, stats = quantize_model_spherequant(model_q, bits, codebook,
+    elif variant == "apexquant":
+        model_q, stats = quantize_model_apexquant(model_q, bits, codebook,
                                            rotation_seed=rotation_seed)
     else:
         raise ValueError(f"unknown variant {variant}")
@@ -146,8 +146,8 @@ def sweep_model(model_id: str, bits_list, codebooks, device: str,
         # 2. QuaRot-RTN (rotation + per-channel absmax uniform)
         run_one(model, tokenizer, model_id, "quarot", bits, "symabs_uniform",
                 device, text, rotation_seed, seq_len, max_chunks, s)
-        # 3. SphereQuant Beta (ours)
-        run_one(model, tokenizer, model_id, "spherequant", bits, "beta",
+        # 3. ApexQuant Beta (ours)
+        run_one(model, tokenizer, model_id, "apexquant", bits, "beta",
                 device, text, rotation_seed, seq_len, max_chunks, s)
 
     del model

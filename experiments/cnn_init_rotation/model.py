@@ -1,4 +1,4 @@
-"""3-layer CNN for CIFAR-10. Standard Kaiming init. Used as the SphereQuant baseline."""
+"""3-layer CNN for CIFAR-10. Standard Kaiming init. Used as the ApexQuant baseline."""
 
 import torch.nn as nn
 
